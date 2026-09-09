@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="520" font-family="system-ui,sans-serif">
+<rect width="860" height="520" fill="white"/>
+<text x="80" y="28" font-size="17" font-weight="bold">Escalabilidad: tiempo vs líneas (log-log)</text>
+<line x1="80.0" y1="50.0" x2="80.0" y2="460.0" stroke="#ddd"/>
+<text x="80.0" y="478.0" font-size="12" text-anchor="middle">10^6</text>
+<line x1="375.0" y1="50.0" x2="375.0" y2="460.0" stroke="#ddd"/>
+<text x="375.0" y="478.0" font-size="12" text-anchor="middle">10^7</text>
+<line x1="670.0" y1="50.0" x2="670.0" y2="460.0" stroke="#ddd"/>
+<text x="670.0" y="478.0" font-size="12" text-anchor="middle">10^8</text>
+<line x1="80.0" y1="460.0" x2="670.0" y2="460.0" stroke="#ddd"/>
+<text x="74.0" y="464.0" font-size="12" text-anchor="end">100 ms</text>
+<line x1="80.0" y1="357.5" x2="670.0" y2="357.5" stroke="#ddd"/>
+<text x="74.0" y="361.5" font-size="12" text-anchor="end">1.0 s</text>
+<line x1="80.0" y1="255.0" x2="670.0" y2="255.0" stroke="#ddd"/>
+<text x="74.0" y="259.0" font-size="12" text-anchor="end">10.0 s</text>
+<line x1="80.0" y1="152.5" x2="670.0" y2="152.5" stroke="#ddd"/>
+<text x="74.0" y="156.5" font-size="12" text-anchor="end">1.7 min</text>
+<line x1="80.0" y1="50.0" x2="670.0" y2="50.0" stroke="#ddd"/>
+<text x="74.0" y="54.0" font-size="12" text-anchor="end">16.7 min</text>
+<text x="375.0" y="504.0" font-size="13" text-anchor="middle">líneas del log</text>
+<polyline points="80.0,269.3 286.2,201.0 463.8,135.7" fill="none" stroke="#c0392b" stroke-width="2.5"/>
+<circle cx="80.0" cy="269.3" r="4" fill="#c0392b"/>
+<text x="80.0" y="260.3" font-size="11" text-anchor="middle" fill="#c0392b">7.3 s</text>
+<circle cx="286.2" cy="201.0" r="4" fill="#c0392b"/>
+<text x="286.2" y="192.0" font-size="11" text-anchor="middle" fill="#c0392b">33.6 s</text>
+<circle cx="463.8" cy="135.7" r="4" fill="#c0392b"/>
+<text x="463.8" y="126.7" font-size="11" text-anchor="middle" fill="#c0392b">2.4 min</text>
+<line x1="684.0" y1="58.0" x2="712.0" y2="58.0" stroke="#c0392b" stroke-width="2.5"/>
+<text x="718.0" y="62.0" font-size="12">v0-baseline</text>
+<polyline points="80.0,354.1 286.2,272.1 463.8,218.2" fill="none" stroke="#d68910" stroke-width="2.5"/>
+<circle cx="80.0" cy="354.1" r="4" fill="#d68910"/>
+<text x="80.0" y="345.1" font-size="11" text-anchor="middle" fill="#d68910">1.1 s</text>
+<circle cx="286.2" cy="272.1" r="4" fill="#d68910"/>
+<text x="286.2" y="263.1" font-size="11" text-anchor="middle" fill="#d68910">6.8 s</text>
+<circle cx="463.8" cy="218.2" r="4" fill="#d68910"/>
+<text x="463.8" y="209.2" font-size="11" text-anchor="middle" fill="#d68910">22.9 s</text>
+<line x1="684.0" y1="80.0" x2="712.0" y2="80.0" stroke="#d68910" stroke-width="2.5"/>
+<text x="718.0" y="84.0" font-size="12">v2-manual</text>
+<polyline points="80.0,407.2 286.2,317.2 463.8,251.4" fill="none" stroke="#2471a3" stroke-width="2.5"/>
+<circle cx="80.0" cy="407.2" r="4" fill="#2471a3"/>
+<text x="80.0" y="398.2" font-size="11" text-anchor="middle" fill="#2471a3">327 ms</text>
+<circle cx="286.2" cy="317.2" r="4" fill="#2471a3"/>
+<text x="286.2" y="308.2" font-size="11" text-anchor="middle" fill="#2471a3">2.5 s</text>
+<circle cx="463.8" cy="251.4" r="4" fill="#2471a3"/>
+<text x="463.8" y="242.4" font-size="11" text-anchor="middle" fill="#2471a3">10.8 s</text>
+<line x1="684.0" y1="102.0" x2="712.0" y2="102.0" stroke="#2471a3" stroke-width="2.5"/>
+<text x="718.0" y="106.0" font-size="12">v3-conc</text>
+<polyline points="286.2,369.7 463.8,295.3" fill="none" stroke="#1e8449" stroke-width="2.5"/>
+<circle cx="286.2" cy="369.7" r="4" fill="#1e8449"/>
+<text x="286.2" y="360.7" font-size="11" text-anchor="middle" fill="#1e8449">760 ms</text>
+<circle cx="463.8" cy="295.3" r="4" fill="#1e8449"/>
+<text x="463.8" y="286.3" font-size="11" text-anchor="middle" fill="#1e8449">4.0 s</text>
+<line x1="684.0" y1="124.0" x2="712.0" y2="124.0" stroke="#1e8449" stroke-width="2.5"/>
+<text x="718.0" y="128.0" font-size="12">v4-cache</text>
+</svg>

@@ -1,0 +1,48 @@
+# Fase 5 — Perfil de CPU: regex vs parseo manual (5 M líneas)
+
+## Benchmark aislado (go test -bench BenchmarkParsear -benchmem)
+```
+BenchmarkParsear/regex-12         	  370132	      2878 ns/op	  51.78 MB/s	     385 B/op	       2 allocs/op
+BenchmarkParsear/manual-12        	 6617691	       175.3 ns/op	 849.84 MB/s	       0 B/op	       0 allocs/op
+ok  	parcial1/internal/parse	2.952s
+```
+
+## v1 regex — go tool pprof -top
+```
+Showing nodes accounting for 21040ms, 76.62% of 27460ms total
+Dropped 179 nodes (cum <= 137.30ms)
+Showing top 12 nodes out of 77
+      flat  flat%   sum%        cum   cum%
+    6490ms 23.63% 23.63%    15050ms 54.81%  regexp.(*Regexp).tryBacktrack
+    3810ms 13.87% 37.51%     3810ms 13.87%  regexp.(*bitState).shouldVisit (inline)
+    2640ms  9.61% 47.12%     2640ms  9.61%  regexp/syntax.(*Inst).MatchRunePos
+    2470ms  8.99% 56.12%     2470ms  8.99%  runtime.spanClass.sizeclass
+    1450ms  5.28% 61.40%     1450ms  5.28%  runtime.cgocall
+     740ms  2.69% 64.09%     1000ms  3.64%  regexp.(*inputString).step
+     720ms  2.62% 66.72%      720ms  2.62%  aeshashbody
+     670ms  2.44% 69.16%      670ms  2.44%  runtime.semawakeup
+     630ms  2.29% 71.45%      630ms  2.29%  regexp.(*bitState).push (inline)
+     560ms  2.04% 73.49%     1540ms  5.61%  time.parse
+     510ms  1.86% 75.35%      510ms  1.86%  internal/runtime/maps.ctrlGroup.matchH2
+     350ms  1.27% 76.62%     2990ms 10.89%  regexp/syntax.(*Inst).MatchRune (inline)
+```
+
+## v2 manual — go tool pprof -top
+```
+Showing nodes accounting for 4510ms, 79.12% of 5700ms total
+Dropped 54 nodes (cum <= 28.50ms)
+Showing top 12 nodes out of 83
+      flat  flat%   sum%        cum   cum%
+    1150ms 20.18% 20.18%     1150ms 20.18%  runtime.spanClass.sizeclass (inline)
+    1070ms 18.77% 38.95%     1100ms 19.30%  runtime.cgocall
+     490ms  8.60% 47.54%      490ms  8.60%  aeshashbody
+     410ms  7.19% 54.74%      410ms  7.19%  internal/runtime/maps.ctrlGroup.matchH2 (inline)
+     310ms  5.44% 60.18%      670ms 11.75%  parcial1/internal/parse.campo
+     250ms  4.39% 64.56%      250ms  4.39%  indexbytebody
+     180ms  3.16% 67.72%     1000ms 17.54%  parcial1/internal/parse.ParsearManual
+     170ms  2.98% 70.70%      170ms  2.98%  runtime.memmove
+     140ms  2.46% 73.16%     1540ms 27.02%  parcial1/internal/agregado.(*Contadores).Agregar
+     130ms  2.28% 75.44%     1290ms 22.63%  runtime.tryDeferToSpanScan
+     110ms  1.93% 77.37%     1310ms 22.98%  runtime.mapassign_faststr
+     100ms  1.75% 79.12%      100ms  1.75%  internal/bytealg.IndexByteString
+```

@@ -1,0 +1,16 @@
+# Fase 8 — Detección de anomalías (1M líneas, umbrales por defecto)
+
+Detección de anomalías  (pasada secuencial extra: 1.282s)
+  1.  [rafaga]    148.251.175.245  02/01 06:18:10 → 06:18:40  500 solicitudes; hasta 500 dentro de una ventana de 1m0s
+  2.  [pico_5xx]  /api/checkout    04/01 12:00:00 → 13:00:00  704 respuestas 5xx en la franja (típico 118 ± 83); 497 en /api/checkout
+  3.  [escaneo]   140.92.76.177    06/01 06:15:45 → 06:17:44  80 respuestas 404 sobre 38 rutas distintas en la ventana
+
+  Contra el ground truth:
+    [rafaga]    148.251.175.245  DETECTADA
+    [pico_5xx]  /api/checkout    DETECTADA
+    [escaneo]   140.92.76.177    DETECTADA
+    recall 3/3, precisión 100%  (3 hallazgos, 0 falsos positivos)
+
+Umbrales: rafaga ≥100 ev/60s (IP normal más activa ~15/min; escáner ~66/min queda abajo a propósito);
+escaneo ≥15 rutas distintas con 404 en 10 min; pico 5xx: franja > μ+3σ leave-one-out, piso 50.
+Lección: con pocas franjas el outlier infla σ y se esconde a sí mismo → μ/σ se calculan sin la franja candidata.

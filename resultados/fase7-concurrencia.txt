@@ -1,0 +1,46 @@
+# Fase 7 — Concurrencia: map-reduce por bloques
+
+Binario compilado, corridas intercaladas en una misma tanda (máquina: 12 hilos).
+GOMAXPROCS=12. Modo conc = bloques alineados a '\n', contadores por worker, fusión final.
+
+## 1M líneas (184 MB), dos rondas intercaladas
+seq:            1.091s / 1.115s          (speedup 1.0×)
+conc w=2:       775ms  / 724ms           (~1.5×)
+conc w=4:       560ms  / 523ms           (~2.0×)
+conc w=6:       444ms  / 501ms           (~2.3×)
+conc w=8:       360ms  / 399ms           (~2.9×)  ← mejor
+conc w=12:      363ms  / 438ms           (se estanca)
+conc-mutex w=8: 1.179s / 1.213s          (¡MÁS LENTO que secuencial!)
+
+## 5M líneas (919 MB)
+seq:       6.569s   heap 137.4 MB   1200.9 MB asignados   48 GC
+conc w=8:  2.562s   heap 137.3 MB   1420.8 MB asignados   31 GC   (2.6×)
+(el +220 MB asignado = los 8 mapas parciales + fusión; menos ciclos de GC
+porque el heap vivo de los workers sube el umbral del GC)
+
+## Archivo chico (20k líneas, 3.7 MB): ¿overhead?
+seq:      24–27 ms
+conc w=8: 11–17 ms   (~2×: incluso acá conviene; el overhead fijo de
+                      goroutines+fusión recién dominaría a tamaños de KB)
+
+## Contención (conc-mutex)
+Un único Contadores compartido con sync.Mutex por línea usa 8 núcleos y es
+más lento que la versión secuencial: el trabajo útil queda serializado por el
+lock y se paga además la adquisición ~n veces y el ping-pong de la línea de
+caché del mutex. Moraleja: la concurrencia paga cuando NO hay estado
+compartido (mapas parciales + reduce), no por usar goroutines.
+
+## Por qué el speedup se estanca en ~3× con 8–12 hilos
+El trabajo por línea es corto y dominado por accesos a memoria (inserciones en
+mapas = misses de caché) + asignaciones (Text/ReadString por línea, GC
+compartido) + lectura del archivo. Al escalar workers se satura el ancho de
+banda de memoria y el allocator/GC compartido antes que el CPU. El perfil de la
+Fase 5 ya mostraba mapassign+GC+syscalls como dominantes tras quitar el regex.
+
+## Traza
+resultados/perfiles/trace-conc8.out  →  go tool trace resultados/perfiles/trace-conc8.out
+
+## Validación
+conc w=8 contra ground-truth.json: total, hora pico, top endpoints/estados/IPs
+idénticos. Tests: igualdad exacta seq vs conc para w ∈ {2,3,7,8,16,61},
+archivo minúsculo, vacío y con líneas malformadas.

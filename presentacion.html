@@ -1,0 +1,478 @@
+<title>Analizador de Logs a Escala</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Public+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+  :root{
+    --papel:#F6F7F4; --panel:#EDF0EA; --tinta:#1E2523; --tinta2:#59655E;
+    --linea:#D8DED4; --grilla:#E7EBE3;
+    --verde:#166B52; --verde-suave:#E1EEE6;
+    --rojo:#A63A2B; --rojo-suave:#F3E4E0;
+    --ambar:#A5720F; --azul:#3D5A80;
+    --term:#202825; --term-texto:#D7E0DA; --term-verde:#8FD8AF; --term-tenue:#8B9A92;
+    --display:"Bricolage Grotesque",Georgia,serif;
+    --cuerpo:"Public Sans",system-ui,sans-serif;
+    --mono:"JetBrains Mono",Consolas,monospace;
+  }
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--tinta); color:var(--tinta);
+    font-family:var(--cuerpo); font-size:16px; line-height:1.45;
+    min-height:100vh;
+  }
+  .mazo{max-width:1100px;margin:0 auto;padding:14px 16px 20px}
+
+  /* ── barra superior ─────────────────────────────── */
+  .barra{display:flex;align-items:center;gap:14px;color:#B9C4BD;font-family:var(--mono);font-size:12px;padding:4px 6px 10px}
+  .barra .marca{color:#E8EDE9;font-weight:700;letter-spacing:.06em}
+  .progreso{flex:1;height:2px;background:#3A453F;border-radius:2px;overflow:hidden}
+  .progreso i{display:block;height:100%;width:0;background:var(--term-verde);transition:width .25s}
+  #contador{min-width:56px;text-align:right}
+
+  /* ── escenario y diapositivas ───────────────────── */
+  .diapo{
+    background:var(--papel);
+    background-image:linear-gradient(var(--grilla) 1px,transparent 1px),linear-gradient(90deg,var(--grilla) 1px,transparent 1px);
+    background-size:28px 28px;
+    border-radius:6px; padding:38px 48px 44px; min-height:590px;
+    box-sizing:border-box; display:flex; flex-direction:column; gap:18px;
+  }
+  .ojal{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--verde);display:flex;gap:14px;align-items:baseline}
+  .ojal .t{color:var(--tinta2);letter-spacing:.06em}
+  h1,h2{font-family:var(--display);line-height:1.08;margin:0;text-wrap:balance;color:var(--tinta)}
+  h1{font-size:clamp(34px,4.6vw,54px);font-weight:800}
+  h2{font-size:clamp(26px,3.4vw,38px);font-weight:700}
+  h3{font-family:var(--cuerpo);font-size:14px;font-weight:700;margin:0 0 6px;text-transform:uppercase;letter-spacing:.08em;color:var(--tinta2)}
+  p{margin:0}
+  .diapo a{color:var(--verde)}
+  strong{color:var(--tinta)}
+  .verde{color:var(--verde)} .rojo{color:var(--rojo)} .ambar{color:var(--ambar)} .azul{color:var(--azul)}
+  .tenue{color:var(--tinta2)}
+  .mono{font-family:var(--mono)}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* componentes */
+  .fila{display:flex;gap:18px;flex-wrap:wrap}
+  .col{flex:1;min-width:260px}
+  .caja{background:#FFFFFF;border:1px solid var(--linea);border-radius:6px;padding:14px 16px}
+  .cifra{font-family:var(--display);font-weight:800;font-size:clamp(44px,6vw,76px);line-height:1;color:var(--verde)}
+  .cifra small{font-size:.38em;font-weight:700;color:var(--tinta2);letter-spacing:.02em}
+
+  table{border-collapse:collapse;width:100%;font-size:14.5px;background:#fff;border:1px solid var(--linea);border-radius:6px;overflow:hidden}
+  th,td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--linea)}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--tinta2);background:var(--panel)}
+  tr:last-child td{border-bottom:none}
+  td.n,th.n{text-align:right;font-family:var(--mono);font-size:13.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tablero{overflow-x:auto}
+
+  .term{background:var(--term);color:var(--term-texto);font-family:var(--mono);font-size:13px;line-height:1.55;border-radius:6px;padding:14px 18px;overflow-x:auto}
+  .term .p{color:var(--term-verde)} .term .c{color:var(--term-tenue)} .term b{color:#fff;font-weight:700}
+  .term .ok{color:var(--term-verde);font-weight:700} .term .mal{color:#E8A196}
+
+  ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:7px}
+  li::marker{color:var(--verde)}
+
+  .pipa{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;font-family:var(--mono);font-size:13px}
+  .pipa .paso{background:#fff;border:1.5px solid var(--tinta);border-radius:6px;padding:10px 14px;text-align:center;min-width:96px}
+  .pipa .paso small{display:block;color:var(--tinta2);font-family:var(--cuerpo);font-size:11.5px;margin-top:3px}
+  .pipa .fl{align-self:center;padding:0 8px;color:var(--tinta2);font-size:17px}
+
+  .barras{display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:13px}
+  .barras .b{display:grid;grid-template-columns:120px 1fr 64px;gap:10px;align-items:center}
+  .barras .tubo{background:var(--panel);border-radius:3px;height:16px;overflow:hidden}
+  .barras .tubo i{display:block;height:100%;background:var(--verde);border-radius:3px}
+  .barras .mal i{background:var(--rojo)}
+  .barras .v{text-align:right;font-variant-numeric:tabular-nums}
+
+  .anota{border-left:3px solid var(--verde);background:var(--verde-suave);padding:10px 14px;border-radius:0 6px 6px 0;font-size:14.5px}
+  .anota.mala{border-color:var(--rojo);background:var(--rojo-suave)}
+
+  .lineaLog{font-family:var(--mono);font-size:12.5px;overflow-x:auto;white-space:nowrap;background:#fff;border:1px solid var(--linea);border-radius:6px;padding:12px 14px}
+  .lineaLog b{font-weight:700}
+  .campos{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--tinta2);margin-top:8px;font-family:var(--mono)}
+  .campos span::before{content:"■ ";font-size:9px}
+
+  .autores{display:flex;gap:26px;flex-wrap:wrap;margin-top:6px;padding-top:14px;border-top:1px solid var(--linea);
+    font-family:var(--mono);font-size:13px;letter-spacing:.02em;color:var(--tinta)}
+
+  /* ── controles ──────────────────────────────────── */
+  .controles{display:flex;justify-content:space-between;align-items:center;padding-top:12px;color:#B9C4BD;font-family:var(--mono);font-size:12px}
+  .controles button{
+    background:none;border:1px solid #4A564F;color:#E8EDE9;font-family:var(--mono);font-size:14px;
+    border-radius:5px;padding:7px 18px;cursor:pointer
+  }
+  .controles button:hover{border-color:var(--term-verde);color:var(--term-verde)}
+  .controles button:focus-visible{outline:2px solid var(--term-verde);outline-offset:2px}
+  .controles button:disabled{opacity:.35;cursor:default}
+
+  @media (prefers-reduced-motion:no-preference){
+    .diapo{animation:entrar .22s ease-out}
+    @keyframes entrar{from{opacity:.35;transform:translateY(5px)}to{opacity:1;transform:none}}
+  }
+  @media print{
+    body{background:#fff}
+    .barra,.controles{display:none}
+    .diapo[hidden]{display:flex !important}
+    .diapo{min-height:auto;page-break-after:always;border:1px solid var(--linea);margin-bottom:14px}
+  }
+  @media (max-width:700px){ .diapo{padding:24px 22px 30px;min-height:0} }
+</style>
+
+<div class="mazo">
+  <header class="barra">
+    <span class="marca">PROG·EFICIENTE</span>
+    <span>Parcial 1 · Opción 3 · Go</span>
+    <div class="progreso"><i id="avance"></i></div>
+    <span id="contador">1 / 11</span>
+  </header>
+
+  <main id="escenario">
+
+    <!-- ── 0 · PORTADA ─────────────────────────────── -->
+    <section class="diapo" style="justify-content:center">
+      <p class="ojal">Programación Eficiente <span class="t">·</span> Primer Parcial <span class="t">·</span> Opción 3 <span class="t">·</span> Go (solo stdlib)</p>
+      <h1>Analizador de grandes<br>volúmenes de logs</h1>
+      <div class="fila" style="margin-top:10px">
+        <div><div class="cifra num">20 M<small> líneas</small></div><p class="tenue">3,59 GB · Apache Combined</p></div>
+        <div><div class="cifra num" style="color:var(--rojo)">2,4<small> min</small></div><p class="tenue">baseline (regex, secuencial)</p></div>
+        <div><div class="cifra num">10,9<small> s</small></div><p class="tenue">versión final (13,4×)</p></div>
+      </div>
+      <div class="lineaLog" style="margin-top:14px">
+        <span class="tenue">148.251.175.245 - alex [02/Jan/2024:06:18:10 -0300] "POST /usr/login HTTP/1.1" 200 4823 "-" "python-requests/2.31.0" 342</span>
+      </div>
+      <p class="tenue" style="font-size:13.5px">Cinco preguntas: errores más frecuentes · endpoints más usados · usuarios/IPs más activos · horas pico · patrones anómalos.</p>
+      <div class="autores">
+        <span>Checa, Sol</span><span>Gómez Geneiro, Facundo</span><span>Nicolais, Manu</span>
+      </div>
+    </section>
+
+    <!-- ── 1 · EL PROBLEMA ─────────────────────────── -->
+    <section class="diapo" hidden>
+      <p class="ojal">1 / 10 · El problema <span class="t">· ≈ 1 min</span></p>
+      <h2>Un pipeline donde el cuello de botella se muda</h2>
+      <div class="lineaLog">
+        <b class="verde">148.251.175.245</b> - <b class="azul">alex</b> [<b class="ambar">02/Jan/2024:06:18:10 -0300</b>] "<b>POST /usr/login HTTP/1.1</b>" <b class="rojo">200</b> <b>4823</b> "-" "<b class="tenue">python-requests/2.31.0</b>" <b>342</b>
+        <div class="campos"><span class="verde">IP cliente</span><span class="azul">usuario</span><span class="ambar">fecha y zona</span><span>método · ruta · protocolo</span><span class="rojo">status</span><span>bytes</span><span class="tenue">user agent</span><span>latencia ms</span></div>
+      </div>
+      <div class="fila">
+        <div class="col caja">
+          <h3>Por qué es interesante</h3>
+          <ul>
+            <li><strong>CPU</strong>: parsear cada byte de millones de líneas.</li>
+            <li><strong>Memoria</strong>: contar sobre ~0,4 claves únicas por línea (IPs).</li>
+            <li><strong>I/O</strong>: leer gigabytes de disco.</li>
+          </ul>
+        </div>
+        <div class="col caja">
+          <h3>Datos: generador propio</h3>
+          <ul>
+            <li>Poisson no homogéneo (curva horaria) + Zipf en endpoints/IPs/usuarios.</li>
+            <li>3 anomalías inyectadas con <strong>ground truth</strong> exacto.</li>
+            <li>→ cada versión se <strong>valida automáticamente</strong>.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="anota">El de Kaggle quedó descartado: timestamp idéntico en todas las líneas (bug), distribuciones uniformes (Top-N sin señal) y cero anomalías.</p>
+    </section>
+
+    <!-- ── 2 · DISEÑO INICIAL ──────────────────────── -->
+    <section class="diapo" hidden>
+      <p class="ojal">2 / 10 · Diseño inicial <span class="t">· ≈ 1½ min</span></p>
+      <h2>v0: primero que funcione, después medir</h2>
+      <div class="pipa">
+        <div class="paso">leer<small>bufio, línea a línea</small></div><div class="fl">→</div>
+        <div class="paso">parsear<small>regex, 11 grupos</small></div><div class="fl">→</div>
+        <div class="paso">contar<small>4 maps + [24]hora</small></div><div class="fl">→</div>
+        <div class="paso">Top-N<small>ordenar todo</small></div><div class="fl">→</div>
+        <div class="paso">reportar<small>tabwriter</small></div>
+      </div>
+      <div class="fila">
+        <div class="col caja">
+          <h3>Baseline · 5 M de líneas (919 MB)</h3>
+          <table><tbody>
+            <tr><td>Tiempo</td><td class="n">33,6 s</td></tr>
+            <tr><td>Memoria asignada (churn)</td><td class="n">3 036 MB</td></tr>
+            <tr><td>Asignaciones / ciclos de GC</td><td class="n">17,0 M / 121</td></tr>
+          </tbody></table>
+        </div>
+        <div class="col">
+          <p style="padding-top:6px">Deliberadamente ingenuo pero <strong>correcto y validado</strong> contra el ground truth. Es la línea base que exige el enunciado — y la vara contra la que se mide cada optimización.</p>
+          <p class="anota" style="margin-top:12px">Deck, slide 269: <em>“primero, haz que funcione”</em>. Optimizar sin baseline es optimizar a ciegas.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 3 · COMPLEJIDAD ─────────────────────────── -->
+    <section class="diapo" hidden>
+      <p class="ojal">3 / 10 · Complejidad algorítmica <span class="t">· ≈ 2 min</span></p>
+      <h2>Todo O(n) — o el problema no se puede resolver</h2>
+      <div class="tablero"><table>
+        <thead><tr><th>Operación</th><th>Costo</th><th>De dónde sale</th></tr></thead>
+        <tbody>
+          <tr><td>Parseo (regex RE2 <em>y</em> manual)</td><td class="n">O(n·L)</td><td>cada byte se mira O(1) veces; autómata de tamaño constante. La diferencia es la <strong>constante</strong>, no el orden</td></tr>
+          <tr><td>Conteo con hash map</td><td class="n">O(1) amort.</td><td>rehash de <span class="mono">j</span> entradas cada <span class="mono">j</span> inserciones → se amortiza</td></tr>
+          <tr><td class="rojo">Conteo con slice + scan (evitado)</td><td class="n rojo">O(n·u) → O(n²)</td><td>u<sub>ip</sub> ≈ n ⇒ ~10¹⁴ operaciones a 20 M. <strong>Días.</strong></td></tr>
+          <tr><td>Top-N: ordenar todo</td><td class="n">O(u log u)</td><td>pdqsort; T(u)=2T(u/2)+O(u)</td></tr>
+          <tr><td>Top-N: min-heap de k</td><td class="n">O(u log k)</td><td>u pasadas × una operación de heap de altura log k</td></tr>
+          <tr><td>Espacio de los contadores</td><td class="n">O(u<sub>ip</sub>) ≈ O(n)</td><td>endpoints/status/usuarios acotados; <strong>las IPs crecen con n</strong> → el límite real</td></tr>
+        </tbody>
+      </table></div>
+      <p class="anota">Con n = 2·10⁷: un pipeline O(n) son <strong>segundos</strong>; cualquier paso O(n²) son <strong class="rojo">días</strong>. Ese es el corsé de diseño — y por qué la estructura de datos decide el problema.</p>
+    </section>
+
+    <!-- ── 4 · ALGORITMOS Y ESTRUCTURAS ────────────── -->
+    <section class="diapo" hidden>
+      <p class="ojal">4 / 10 · Algoritmos y estructuras <span class="t">· ≈ 2 min</span></p>
+      <h2>Tres decisiones, tres justificaciones distintas</h2>
+      <div class="fila">
+        <div class="col caja">
+          <h3>1 · map vs slice</h3>
+          <p><span class="mono num">O(n)</span> vs <span class="mono num rojo">O(n²)</span></p>
+          <p class="tenue" style="font-size:13.5px;margin-top:6px">Cambio de <strong>orden</strong>: se justifica con la notación. La única decisión donde Big-O alcanza.</p>
+        </div>
+        <div class="col caja">
+          <h3>2 · min-heap vs sort (Top-N)</h3>
+          <p class="num"><strong class="verde">14×</strong> y <strong class="verde">28 000×</strong> menos memoria… <strong class="rojo">en aislado</strong></p>
+          <p class="tenue" style="font-size:13.5px;margin-top:6px">En el total: ~3 %. El parseo dominaba. <strong>Optimizamos fuera del camino crítico</strong> — se justifica midiendo.</p>
+        </div>
+        <div class="col caja">
+          <h3>3 · parser manual vs regex</h3>
+          <p class="num"><span class="rojo">2 878</span> → <strong class="verde">175 ns/op</strong> · <span class="rojo">385</span> → <strong class="verde">0 B/op</strong></p>
+          <p class="tenue" style="font-size:13.5px;margin-top:6px">Misma clase O(n·L): la ganancia es constante + cero basura para el GC. También se justifica midiendo.</p>
+        </div>
+      </div>
+      <div class="tablero"><table>
+        <thead><tr><th>Estructura</th><th>Dónde</th><th>Por qué</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">map[string]int</td><td>contadores</td><td>actualización O(1) amortizada; el orden no importa hasta el reporte</td></tr>
+          <tr><td class="mono">container/heap</td><td>Top-N de IPs</td><td>k ≪ u: O(u log k) y espacio O(k) en vez de O(u)</td></tr>
+          <tr><td class="mono">map[string]struct{}</td><td>rutas por IP (escáner)</td><td>pertenencia y cardinalidad O(1)</td></tr>
+          <tr><td class="mono">deque (ventana deslizante)</td><td>ráfagas por IP</td><td>alta y baja por extremos O(1) — cada evento entra y sale una vez</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ── 5 · MEMOIZACIÓN Y CACHING ───────────────── -->
+    <section class="diapo" hidden>
+      <p class="ojal">5 / 10 · Memoización y caching <span class="t">· ≈ 1½ min</span></p>
+      <h2>Dos estrategias — y un hallazgo inesperado</h2>
+      <div class="tablero"><table>
+        <thead><tr><th></th><th>Memoización de agregados</th><th>Cache de consultas Top-N</th></tr></thead>
+        <tbody>
+          <tr><td>Qué guarda</td><td>los contadores completos (gob, ~29 MB por 5 M)</td><td>la respuesta por <span class="mono">(métrica, n)</span></td></tr>
+          <tr><td>Clave</td><td class="mono">ruta + tamaño + mtime del log</td><td class="mono">"endpoints:10"</td></tr>
+          <tr><td>Invalidación</td><td>no hace falta: función pura del archivo</td><td><strong>marca de sucio</strong> al entrar datos nuevos</td></tr>
+          <tr><td>Mejora</td><td class="n"><strong class="verde">0,76 s</strong> vs 33,6 s baseline (44×)</td><td class="n">3 hits por corrida (reporte + validación)</td></tr>
+        </tbody>
+      </table></div>
+      <p class="anota">🔍 <strong>Hallazgo al comparar heap parseado vs deserializado</strong>: la clave del map era un sub-slice y <strong>retenía viva la línea entera</strong> (~190 B por IP única). Clonando la clave solo al insertar: heap retenido <span class="num"><span class="rojo">98,6</span> → <strong class="verde">19,9 MB</strong></span> por millón de líneas, con costo de tiempo nulo (verificado A/B).</p>
+    </section>
+
+    <!-- ── 6 · CONCURRENCIA ────────────────────────── -->
+    <section class="diapo" hidden>
+      <p class="ojal">6 / 10 · Concurrencia <span class="t">· ≈ 2 min</span></p>
+      <h2>Map-reduce sin estado compartido</h2>
+      <div class="fila">
+        <div class="col">
+          <div class="pipa" style="margin-bottom:12px">
+            <div class="paso">archivo<small>bloques alineados a \n</small></div><div class="fl">→</div>
+            <div class="paso">8 workers<small>contadores propios</small></div><div class="fl">→</div>
+            <div class="paso">fusión<small>WaitGroup + reduce O(u·P)</small></div>
+          </div>
+          <ul style="font-size:14.5px">
+            <li>Cada línea pertenece <strong>exactamente</strong> al bloque de su primer byte — sin pérdidas ni duplicados (testeado con 61 workers sobre 20 k líneas).</li>
+            <li>Cero mutex en el camino caliente: la única sincronización es esperar y fusionar.</li>
+            <li>Las <strong>anomalías necesitan orden temporal</strong> → pasada secuencial aparte.</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>1 M de líneas · speedup</h3>
+          <div class="barras">
+            <div class="b"><span>seq</span><span class="tubo"><i style="width:34%"></i></span><span class="v">1,0×</span></div>
+            <div class="b"><span>conc w=2</span><span class="tubo"><i style="width:52%"></i></span><span class="v">1,5×</span></div>
+            <div class="b"><span>conc w=4</span><span class="tubo"><i style="width:69%"></i></span><span class="v">2,0×</span></div>
+            <div class="b"><span>conc w=8</span><span class="tubo"><i style="width:100%"></i></span><span class="v"><strong>2,9×</strong></span></div>
+            <div class="b mal"><span>mutex w=8</span><span class="tubo"><i style="width:31%"></i></span><span class="v rojo">0,9×</span></div>
+          </div>
+          <p class="anota mala" style="margin-top:12px"><strong>El anti-ejemplo, medido:</strong> un contador compartido con lock usa 8 núcleos y pierde contra la versión secuencial. La concurrencia paga por <em>independencia</em>, no por “usar goroutines”.</p>
+        </div>
+      </div>
+      <p class="tenue" style="font-size:13.5px">¿Por qué ~3× y no 8×? El trabajo por línea es corto y limitado por memoria (misses en los mapas) + GC + I/O: se satura el ancho de banda antes que el CPU (el perfil muestra <span class="mono">semasleep</span>).</p>
+    </section>
+
+    <!-- ── 7 · PERFILADO ───────────────────────────── -->
+    <section class="diapo" hidden>
+      <p class="ojal">7 / 10 · Perfilado <span class="t">· ≈ 1½ min</span></p>
+      <h2>El perfil decide qué se optimiza</h2>
+      <div class="fila">
+        <div class="col">
+          <h3>Antes — v1 con regex (pprof, 5 M)</h3>
+          <div class="term">regexp.tryBacktrack        <b class="mal">57,5 %</b> cum<br>regexp.bitState.shouldVisit <span class="mal">14,9 %</span><br>regexp.MatchRunePos         <span class="mal">10,2 %</span><br>time.parse                   7,0 %<br><span class="c">→ el motor de regex es ~70 % del CPU</span></div>
+        </div>
+        <div class="col">
+          <h3>Después — v2 manual</h3>
+          <div class="term">Agregar (mapas)   <b>31 %</b> cum<br>GC / allocator    ~25 %  <span class="c">← string por línea</span><br>ParsearManual     <span class="ok">21 %</span><br>syscalls lectura   ~5 %<br><span class="c">→ ya no hay UN cuello: hay tres</span></div>
+        </div>
+      </div>
+      <div class="fila">
+        <div class="col caja">
+          <h3>Herramientas (todas del toolchain)</h3>
+          <p class="mono" style="font-size:13px;line-height:1.8">testing.B · pprof (CPU+heap) · pprof -list<br>go tool trace · -benchmem · -gcflags=-m</p>
+        </div>
+        <div class="col caja">
+          <h3>Trampas que nos comimos</h3>
+          <ul style="font-size:13.5px">
+            <li>Comparar contra corridas viejas: la máquina cambió 2× entre sesiones → <strong>A/B intercalado siempre</strong>.</li>
+            <li>Perfil <span class="mono">inuse</span> vacío: el GC recolectó los contadores “muertos” → <span class="mono">runtime.KeepAlive</span>.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 8 · RESULTADOS ──────────────────────────── -->
+    <section class="diapo" hidden>
+      <p class="ojal">8 / 10 · Comparación de resultados <span class="t">· ≈ 1½ min</span></p>
+      <h2>De 33,6 s a 0,76 s <span class="tenue" style="font-weight:500">(5 M · tanda única, binario compilado)</span></h2>
+      <div class="fila">
+        <div class="col tablero" style="min-width:300px">
+          <table>
+            <thead><tr><th>Versión</th><th class="n">Tiempo</th><th class="n">Asignado</th><th class="n">GC</th></tr></thead>
+            <tbody>
+              <tr><td>v0 regex + sort</td><td class="n rojo">33,6 s</td><td class="n">3 036 MB</td><td class="n">121</td></tr>
+              <tr><td>v1 + heap Top-N</td><td class="n">35,2 s</td><td class="n">3 036 MB</td><td class="n">121</td></tr>
+              <tr><td>v2 parser manual</td><td class="n">6,81 s</td><td class="n">1 201 MB</td><td class="n">49</td></tr>
+              <tr><td>v3 map-reduce w=8</td><td class="n verde"><strong>2,47 s</strong></td><td class="n">1 421 MB</td><td class="n">31</td></tr>
+              <tr><td>v4 memoización (2ª)</td><td class="n azul"><strong>0,76 s</strong></td><td class="n">213 MB</td><td class="n">6</td></tr>
+            </tbody>
+          </table>
+          <p class="tenue" style="font-size:13px;margin-top:8px">Validación contra ground truth: <strong class="verde">OK en 1 M, 5 M y 20 M</strong>. Anomalías: recall 3/3, precisión 100 %.</p>
+        </div>
+        <div class="col" style="min-width:340px">
+          <svg viewBox="0 0 760 430" role="img" aria-label="Escalabilidad log-log: tiempo vs líneas" style="width:100%;height:auto;background:#fff;border:1px solid var(--linea);border-radius:6px">
+            <!-- grilla -->
+            <line x1="70" y1="292" x2="600" y2="292" stroke="#E7EBE3"/><text x="64" y="296" font-size="11" text-anchor="end" fill="#59655E" font-family="JetBrains Mono,monospace">1 s</text>
+            <line x1="70" y1="178.7" x2="600" y2="178.7" stroke="#E7EBE3"/><text x="64" y="182.7" font-size="11" text-anchor="end" fill="#59655E" font-family="JetBrains Mono,monospace">10 s</text>
+            <line x1="70" y1="65.3" x2="600" y2="65.3" stroke="#E7EBE3"/><text x="64" y="69.3" font-size="11" text-anchor="end" fill="#59655E" font-family="JetBrains Mono,monospace">100 s</text>
+            <line x1="70" y1="20" x2="70" y2="368" stroke="#E7EBE3"/><line x1="316.8" y1="20" x2="316.8" y2="368" stroke="#E7EBE3"/><line x1="529.7" y1="20" x2="529.7" y2="368" stroke="#E7EBE3"/>
+            <text x="70" y="388" font-size="12" text-anchor="middle" fill="#59655E" font-family="JetBrains Mono,monospace">1 M</text>
+            <text x="316.8" y="388" font-size="12" text-anchor="middle" fill="#59655E" font-family="JetBrains Mono,monospace">5 M</text>
+            <text x="529.7" y="388" font-size="12" text-anchor="middle" fill="#59655E" font-family="JetBrains Mono,monospace">20 M</text>
+            <text x="335" y="415" font-size="12" text-anchor="middle" fill="#1E2523" font-family="Public Sans,sans-serif">líneas del log (escala log) — pendiente ≈ 1 ⇒ O(n)</text>
+            <!-- v0 -->
+            <polyline points="70,194.4 316.8,119 529.7,46.8" fill="none" stroke="#A63A2B" stroke-width="2.5"/>
+            <circle cx="70" cy="194.4" r="4" fill="#A63A2B"/><circle cx="316.8" cy="119" r="4" fill="#A63A2B"/><circle cx="529.7" cy="46.8" r="4" fill="#A63A2B"/>
+            <text x="70" y="183" font-size="11" text-anchor="middle" fill="#A63A2B" font-family="JetBrains Mono,monospace">7,3 s</text>
+            <text x="316.8" y="108" font-size="11" text-anchor="middle" fill="#A63A2B" font-family="JetBrains Mono,monospace">33,6 s</text>
+            <text x="529.7" y="36" font-size="11" text-anchor="middle" fill="#A63A2B" font-family="JetBrains Mono,monospace">2,4 min</text>
+            <text x="610" y="51" font-size="12" fill="#A63A2B" font-family="Public Sans,sans-serif" font-weight="700">v0 regex</text>
+            <!-- v2 -->
+            <polyline points="70,288.3 316.8,197.6 529.7,137.9" fill="none" stroke="#A5720F" stroke-width="2.5"/>
+            <circle cx="70" cy="288.3" r="4" fill="#A5720F"/><circle cx="316.8" cy="197.6" r="4" fill="#A5720F"/><circle cx="529.7" cy="137.9" r="4" fill="#A5720F"/>
+            <text x="70" y="277" font-size="11" text-anchor="middle" fill="#A5720F" font-family="JetBrains Mono,monospace">1,1 s</text>
+            <text x="316.8" y="221" font-size="11" text-anchor="middle" fill="#A5720F" font-family="JetBrains Mono,monospace">6,8 s</text>
+            <text x="529.7" y="127" font-size="11" text-anchor="middle" fill="#A5720F" font-family="JetBrains Mono,monospace">22,9 s</text>
+            <text x="610" y="142" font-size="12" fill="#A5720F" font-family="Public Sans,sans-serif" font-weight="700">v2 manual</text>
+            <!-- v3 -->
+            <polyline points="70,347 316.8,247.5 529.7,174.7" fill="none" stroke="#166B52" stroke-width="3.5"/>
+            <circle cx="70" cy="347" r="4.5" fill="#166B52"/><circle cx="316.8" cy="247.5" r="4.5" fill="#166B52"/><circle cx="529.7" cy="174.7" r="4.5" fill="#166B52"/>
+            <text x="70" y="336" font-size="11" text-anchor="middle" fill="#166B52" font-family="JetBrains Mono,monospace">0,33 s</text>
+            <text x="316.8" y="270" font-size="11" text-anchor="middle" fill="#166B52" font-family="JetBrains Mono,monospace">2,5 s</text>
+            <text x="529.7" y="164" font-size="11" text-anchor="middle" fill="#166B52" font-family="JetBrains Mono,monospace">10,9 s</text>
+            <text x="610" y="179" font-size="12" fill="#166B52" font-family="Public Sans,sans-serif" font-weight="700">v3 conc w=8</text>
+            <!-- v4 -->
+            <polyline points="316.8,305.5 529.7,223.2" fill="none" stroke="#3D5A80" stroke-width="2.5" stroke-dasharray="6 4"/>
+            <circle cx="316.8" cy="305.5" r="4" fill="#3D5A80"/><circle cx="529.7" cy="223.2" r="4" fill="#3D5A80"/>
+            <text x="316.8" y="327" font-size="11" text-anchor="middle" fill="#3D5A80" font-family="JetBrains Mono,monospace">0,76 s</text>
+            <text x="529.7" y="244" font-size="11" text-anchor="middle" fill="#3D5A80" font-family="JetBrains Mono,monospace">4,0 s</text>
+            <text x="610" y="228" font-size="12" fill="#3D5A80" font-family="Public Sans,sans-serif" font-weight="700">v4 cache</text>
+          </svg>
+        </div>
+      </div>
+      <p class="tenue" style="font-size:13.5px">Letra chica: la forma es O(n), pero la constante de v3 sube ~40 % de 1 M a 20 M — los mapas de IPs (0,4 → 8 M de claves) desbordan las cachés. El heap crece O(n): 20 → 137 → 549 MB.</p>
+    </section>
+
+    <!-- ── 9 · DEMO ────────────────────────────────── -->
+    <section class="diapo" hidden>
+      <p class="ojal">9 / 10 · Demostración en vivo <span class="t">· ≈ 1½ min</span></p>
+      <h2>Guion de la demo</h2>
+      <div class="term" style="font-size:13.5px">
+<span class="p">$</span> go run ./cmd/generar -lineas 1000000        <span class="c"># 184 MB + ground-truth.json, ~2 s</span><br>
+<span class="p">$</span> ./analizar -modo seq -parser regex           <span class="c"># v0: el punto de partida</span><br>
+<span class="p">$</span> ./analizar -modo conc -workers 8 -verificacion ground-truth.json<br>
+&nbsp;&nbsp;<span class="ok">total de líneas OK · hora pico OK · top endpoints/estados/IPs: idénticos</span><br>
+<span class="p">$</span> ./analizar -anomalias -verificacion ground-truth.json<br>
+&nbsp;&nbsp;[rafaga] 148.251.175.245 · [pico_5xx] /api/checkout · [escaneo] 140.92.76.177<br>
+&nbsp;&nbsp;<span class="ok">recall 3/3, precisión 100 % (0 falsos positivos)</span><br>
+<span class="p">$</span> ./analizar -cache <span class="c">&&</span> ./analizar -cache      <span class="c"># 2ª corrida: memoización</span><br>
+<span class="p">$</span> go tool pprof -http=: cpu-v1.pprof            <span class="c"># flame graph: el regex en vivo</span>
+      </div>
+      <div class="fila">
+        <div class="col caja"><h3>Código a mostrar</h3><p class="mono" style="font-size:13px;line-height:1.8">parse/manual.go · agregado/incrementar<br>agregado/topn_heap.go · pipeline.Concurrente</p></div>
+        <div class="col caja"><h3>Plan B</h3><p style="font-size:13.5px">Log de 10 M ya generado + capturas de las corridas, por si la máquina o el proyector no acompañan.</p></div>
+      </div>
+    </section>
+
+    <!-- ── 10 · CONCLUSIONES ───────────────────────── -->
+    <section class="diapo" hidden>
+      <p class="ojal">10 / 10 · Conclusiones <span class="t">· ≈ 1 min</span></p>
+      <h2>Qué aprendimos midiendo</h2>
+      <div class="fila">
+        <div class="col caja" style="border-top:3px solid var(--verde)">
+          <h3>Mayor impacto</h3>
+          <p><strong>El parser manual (4,9×)</strong> — sin cambiar la clase de complejidad. La constante y la basura del GC eran el problema, y solo el perfil podía decirlo.</p>
+        </div>
+        <div class="col caja" style="border-top:3px solid var(--ambar)">
+          <h3>No rindió lo esperado</h3>
+          <p>El <strong>heap del Top-N</strong>: 14× en aislado, ~3 % en el total. Correcto en teoría, fuera del camino crítico en la práctica.</p>
+        </div>
+        <div class="col caja" style="border-top:3px solid var(--azul)">
+          <h3>Próxima versión</h3>
+          <p>Parsear sobre <span class="mono">Bytes()</span>: el 78 % del churn restante es el string por línea (hipótesis medible ya documentada). Y Count-Min Sketch si la memoria O(n) aprieta.</p>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:10px">
+        <p class="cifra" style="font-size:clamp(30px,3.6vw,46px)">medir → optimizar lo que el perfil señala → volver a medir</p>
+        <p class="tenue" style="margin-top:8px">Todo reproducible: semilla fija, ground truth, tests y benchmarks en el repo. ¿Preguntas?</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="controles">
+    <button id="antes" aria-label="diapositiva anterior">← anterior</button>
+    <span>teclas ← → · imprimir = handout completo</span>
+    <button id="despues" aria-label="diapositiva siguiente">siguiente →</button>
+  </footer>
+</div>
+
+<script>
+  const diapos = Array.from(document.querySelectorAll('.diapo'));
+  const avance = document.getElementById('avance');
+  const contador = document.getElementById('contador');
+  const antes = document.getElementById('antes');
+  const despues = document.getElementById('despues');
+  let actual = 0;
+
+  function ir(n){
+    n = Math.max(0, Math.min(diapos.length - 1, n));
+    diapos[actual].hidden = true;
+    actual = n;
+    diapos[actual].hidden = false;
+    contador.textContent = (actual + 1) + ' / ' + diapos.length;
+    avance.style.width = (100 * (actual + 1) / diapos.length) + '%';
+    antes.disabled = actual === 0;
+    despues.disabled = actual === diapos.length - 1;
+    try { history.replaceState(null, '', '#' + (actual + 1)); } catch (e) {}
+  }
+
+  antes.addEventListener('click', () => ir(actual - 1));
+  despues.addEventListener('click', () => ir(actual + 1));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); ir(actual + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); ir(actual - 1); }
+    if (e.key === 'Home') ir(0);
+    if (e.key === 'End') ir(diapos.length - 1);
+  });
+
+  const hash = parseInt(location.hash.slice(1), 10);
+  ir(isNaN(hash) ? 0 : hash - 1);
+</script>

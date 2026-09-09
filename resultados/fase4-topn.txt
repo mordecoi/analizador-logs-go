@@ -1,0 +1,24 @@
+# Fase 4 — Top-N: sort completo vs min-heap
+
+Generado con: go test ./internal/agregado/ -bench BenchmarkTopN -benchmem
+Máquina: windows/amd64, Go go1.26.5
+
+```
+BenchmarkTopN/sort/u=15/k=10-12         	 3050649	       386.3 ns/op	     240 B/op	       1 allocs/op
+BenchmarkTopN/heap/u=15/k=10-12         	 1339447	      1237 ns/op	     680 B/op	      23 allocs/op
+BenchmarkTopN/sort/u=40/k=10-12         	  725851	      1754 ns/op	     640 B/op	       1 allocs/op
+BenchmarkTopN/heap/u=40/k=10-12         	  678206	      1842 ns/op	     680 B/op	      23 allocs/op
+BenchmarkTopN/sort/u=100000/k=10-12     	      78	  15184851 ns/op	 1605632 B/op	       1 allocs/op
+BenchmarkTopN/heap/u=100000/k=10-12     	     998	   1099022 ns/op	     680 B/op	      23 allocs/op
+BenchmarkTopN/sort/u=1200000/k=10-12    	       5	 220269620 ns/op	19202048 B/op	       1 allocs/op
+BenchmarkTopN/heap/u=1200000/k=10-12    	      73	  16165585 ns/op	     680 B/op	      23 allocs/op
+BenchmarkTopN/sort/u=1200000/k=100-12   	       5	 218686920 ns/op	19202048 B/op	       1 allocs/op
+BenchmarkTopN/heap/u=1200000/k=100-12   	      80	  15040779 ns/op	    6808 B/op	     203 allocs/op
+BenchmarkTopN/sort/u=1200000/k=1000-12  	       5	 216532100 ns/op	19202048 B/op	       1 allocs/op
+BenchmarkTopN/heap/u=1200000/k=1000-12  	      64	  17927620 ns/op	   64792 B/op	    2003 allocs/op
+BenchmarkTopN/sort/u=20000/k=10000-12   	     405	   2840955 ns/op	  327683 B/op	       1 allocs/op
+BenchmarkTopN/heap/u=20000/k=10000-12   	     270	   4431999 ns/op	  647706 B/op	   20003 allocs/op
+BenchmarkTopN/sort/u=20000/k=18000-12   	     412	   2916911 ns/op	  327680 B/op	       1 allocs/op
+BenchmarkTopN/heap/u=20000/k=18000-12   	     195	   6145399 ns/op	 1165850 B/op	   36003 allocs/op
+ok  	parcial1/internal/agregado	26.693s
+```

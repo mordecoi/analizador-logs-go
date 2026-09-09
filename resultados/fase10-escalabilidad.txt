@@ -1,0 +1,31 @@
+# Fase 10 — Tanda final: todas las versiones × 1M / 5M / 20M
+# (binario compilado, una sola tanda continua, 2026-09-02 18:07–18:13)
+
+Tabla completa: resultados/comparativa.csv
+Gráfico log-log: resultados/escalabilidad.svg  (pendiente ~1 = O(n))
+
+## Tiempo (y speedup vs v0 del mismo tamaño)
+            1M                5M                 20M (3,59 GB)
+v0-baseline 7,26 s   (1,0×)   33,6 s   (1,0×)    145,7 s = 2,4 min (1,0×)
+v1-heap     —                 35,2 s   (~v0)     —
+v2-manual   1,08 s   (6,7×)   6,81 s   (4,9×)    22,9 s   (6,4×)
+v3-conc w=8 0,33 s  (22,2×)   2,47 s  (13,6×)    10,9 s   (13,4×)
+v4-cache    —                 0,76 s  (44,2×)    4,05 s   (36,0×)
+
+## Rendimiento (líneas/s) — la letra chica de "O(n)"
+v0: 137–149 k/s constante en todo el rango  → O(n) puro
+v2: 927 k/s @1M → 734 k/s @5M → 874 k/s @20M
+v3: 3,06 M/s @1M → 2,02 M/s @5M → 1,84 M/s @20M
+La forma es O(n), pero la constante de v3 crece ~40% de 1M a 20M: los mapas de
+IPs (0,4 → 8 M de claves) desbordan cachés y el costo por inserción sube.
+
+## Memoria
+heap retenido:  19,9 MB @1M → 137 MB @5M → 549 MB @20M  → O(u_ip) ≈ O(n),
+                como predijo COMPLEJIDAD.md §2c (sin el clon de claves de la
+                fase 6 serían ~2,7 GB @20M).
+total asignado v0 @20M: 12,1 GB de churn (regex);  v2: 4,8 GB;  v4: 1,0 GB.
+GC @20M: v0 160 ciclos → v3 45 → v4 10.
+
+## Validación @20M (conc w=8)
+total de líneas / hora pico / top endpoints / estados / IPs: todo OK contra
+ground-truth.json (hora pico 15:00 en esta semilla+span, coincide).

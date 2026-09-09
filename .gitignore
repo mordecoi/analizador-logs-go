@@ -1,0 +1,17 @@
+# Logs generados: se reproducen con `go run ./cmd/generar -semilla <n>`
+*.log
+ground-truth.json
+*.agregados.gob
+
+# Binarios compilados
+*.exe
+*.test
+/analizar
+/generar
+/grafico
+
+# Perfiles sueltos en la raíz; los de resultados/perfiles/ sí se versionan
+# (son la evidencia de las mediciones del informe)
+/*.pprof
+/*.prof
+/trace.out
