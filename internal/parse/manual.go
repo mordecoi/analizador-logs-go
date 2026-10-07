@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"time"
 )
@@ -19,9 +20,9 @@ var meses = map[string]time.Month{
 // líneas de un log real comparten el mismo offset (el del servidor).
 var zonasOffset = func() map[int]*time.Location {
 	m := make(map[int]*time.Location, 128)
-	for min := -12 * 60; min <= 14*60; min += 15 {
-		nombre := fmt.Sprintf("%+03d%02d", min/60, abs(min)%60)
-		m[min] = time.FixedZone(nombre, min*60)
+	for minutos := -12 * 60; minutos <= 14*60; minutos += 15 {
+		nombre := fmt.Sprintf("%+03d%02d", minutos/60, abs(minutos)%60)
+		m[minutos] = time.FixedZone(nombre, minutos*60)
 	}
 	return m
 }()
@@ -33,20 +34,11 @@ func abs(x int) int {
 	return x
 }
 
-// campo devuelve la porción de *s hasta el próximo byte sep (sin incluirlo) y
-// avanza *s más allá del separador. Es un sub-slice: no copia.
-func campo(s *string, sep byte) (string, bool) {
-	i := strings.IndexByte(*s, sep)
-	if i < 0 {
-		return "", false
-	}
-	tok := (*s)[:i]
-	*s = (*s)[i+1:]
-	return tok, true
-}
-
 // atoiSimple convierte una cadena de dígitos a entero sin asignar ni devolver
-// un error con formato (a diferencia de strconv.Atoi).
+// un error con formato (a diferencia de strconv.Atoi). Rechaza la cadena vacía,
+// cualquier byte que no sea dígito y los números que no entran en un int (sin
+// el chequeo de desborde, un campo de 20 dígitos daba un valor negativo: lo
+// encontró el fuzzing).
 func atoiSimple(s string) (int, bool) {
 	if s == "" {
 		return 0, false
@@ -57,13 +49,56 @@ func atoiSimple(s string) (int, bool) {
 		if c < '0' || c > '9' {
 			return 0, false
 		}
-		n = n*10 + int(c-'0')
+		d := int(c - '0')
+		if n > (math.MaxInt-d)/10 {
+			return 0, false
+		}
+		n = n*10 + d
 	}
 	return n, true
 }
 
+// cursor recorre una línea campo por campo con error "pegajoso": la primera
+// lectura que falla deja ok en false y todas las siguientes devuelven "" sin
+// hacer nada. Así el parser se lee como la secuencia de campos del formato y el
+// error se chequea una sola vez al final, en lugar de después de cada campo
+// (es el mismo patrón que usan bufio.Scanner y encoding/binary).
+type cursor struct {
+	resto string
+	ok    bool
+}
+
+// hasta devuelve la porción del resto hasta el próximo byte sep (sin incluirlo)
+// y avanza más allá del separador. Es un sub-slice: no copia.
+func (c *cursor) hasta(sep byte) string {
+	if !c.ok {
+		return ""
+	}
+	i := strings.IndexByte(c.resto, sep)
+	if i < 0 {
+		c.ok = false
+		return ""
+	}
+	tok := c.resto[:i]
+	c.resto = c.resto[i+1:]
+	return tok
+}
+
+// saltar consume el byte b si es el próximo; si no, marca el error.
+func (c *cursor) saltar(b byte) {
+	if !c.ok {
+		return
+	}
+	if c.resto == "" || c.resto[0] != b {
+		c.ok = false
+		return
+	}
+	c.resto = c.resto[1:]
+}
+
 // ParsearManual interpreta la misma línea que Parsear pero recorriéndola una vez
-// con strings.IndexByte. Devuelve exactamente el mismo Entrada.
+// con strings.IndexByte. Para toda línea que acepta Parsear devuelve exactamente
+// el mismo Entrada (lo verifica FuzzManualIgualQueRegex).
 //
 // Diferencias con la versión regex:
 //   - Los campos son sub-slices del string de entrada: no asigna un []string de
@@ -75,90 +110,57 @@ func atoiSimple(s string) (int, bool) {
 // no contienen comillas sin escapar. Los logs que generamos lo cumplen.
 func ParsearManual(linea string) (Entrada, error) {
 	var e Entrada
-	s := linea
-	falla := func() (Entrada, error) {
-		return Entrada{}, fmt.Errorf("línea no reconocida: %q", linea)
-	}
+	c := cursor{resto: linea, ok: true}
 
-	var ok bool
-	if e.IP, ok = campo(&s, ' '); !ok {
-		return falla()
-	}
-	if _, ok = campo(&s, ' '); !ok { // remote logname, siempre "-"
-		return falla()
-	}
-	if e.Usuario, ok = campo(&s, ' '); !ok {
-		return falla()
-	}
+	e.IP = c.hasta(' ')
+	c.hasta(' ') // remote logname, siempre "-"
+	e.Usuario = c.hasta(' ')
 
-	// fecha entre corchetes
-	if len(s) == 0 || s[0] != '[' {
-		return falla()
-	}
-	s = s[1:]
-	fechaStr, ok := campo(&s, ']')
-	if !ok {
-		return falla()
-	}
-	fecha, err := parsearFecha(fechaStr)
-	if err != nil {
-		return Entrada{}, err
-	}
-	e.Fecha = fecha
+	c.saltar('[')
+	fechaStr := c.hasta(']')
 
-	// línea de request entre comillas:  ` "METODO RUTA PROTO" `
-	if _, ok = campo(&s, '"'); !ok {
-		return falla()
-	}
-	req, ok := campo(&s, '"')
-	if !ok {
-		return falla()
-	}
-	if e.Metodo, ok = campo(&req, ' '); !ok {
-		return falla()
-	}
+	c.saltar(' ')
+	c.saltar('"')
+	e.Metodo = c.hasta(' ')
+	req := c.hasta('"') // "RUTA PROTO"
 	if b := strings.LastIndexByte(req, ' '); b >= 0 {
 		e.Ruta, e.Proto = req[:b], req[b+1:]
 	} else {
 		e.Ruta = req
 	}
 
-	// ` estado bytes `
-	s = strings.TrimPrefix(s, " ")
-	estStr, ok := campo(&s, ' ')
-	if !ok {
-		return falla()
+	c.saltar(' ')
+	estStr := c.hasta(' ')
+	bytesStr := c.hasta(' ')
+
+	c.saltar('"')
+	e.Referrer = c.hasta('"')
+	c.saltar(' ')
+	c.saltar('"')
+	e.UA = c.hasta('"')
+
+	if !c.ok {
+		return Entrada{}, fmt.Errorf("línea no reconocida: %q", linea)
 	}
+
+	var ok bool
 	if e.Estado, ok = atoiSimple(estStr); !ok {
 		return Entrada{}, fmt.Errorf("estado inválido %q", estStr)
 	}
-	bytesStr, ok := campo(&s, ' ')
-	if !ok {
-		return falla()
-	}
 	e.Bytes, _ = atoiSimple(bytesStr) // "-" (sin contenido) → 0, como la regex
+	e.RespMs, _ = atoiSimple(strings.TrimSpace(c.resto))
 
-	// referrer y user agent, cada uno entre comillas
-	if _, ok = campo(&s, '"'); !ok {
-		return falla()
+	fecha, err := parsearFecha(fechaStr)
+	if err != nil {
+		return Entrada{}, err
 	}
-	if e.Referrer, ok = campo(&s, '"'); !ok {
-		return falla()
-	}
-	if _, ok = campo(&s, '"'); !ok {
-		return falla()
-	}
-	if e.UA, ok = campo(&s, '"'); !ok {
-		return falla()
-	}
-
-	e.RespMs, _ = atoiSimple(strings.TrimSpace(s))
+	e.Fecha = fecha
 	return e, nil
 }
 
 // parsearFecha interpreta "02/Jan/2006:15:04:05 -0700" por posiciones fijas.
 func parsearFecha(s string) (time.Time, error) {
-	if len(s) != 26 {
+	if len(s) != len(LayoutApache) {
 		return time.Time{}, fmt.Errorf("fecha inválida %q", s)
 	}
 	dia, ok1 := atoiSimple(s[0:2])
@@ -167,7 +169,7 @@ func parsearFecha(s string) (time.Time, error) {
 	hh, ok4 := atoiSimple(s[12:14])
 	mm, ok5 := atoiSimple(s[15:17])
 	ss, ok6 := atoiSimple(s[18:20])
-	if !(ok1 && ok2 && ok3 && ok4 && ok5 && ok6) {
+	if !ok1 || !ok2 || !ok3 || !ok4 || !ok5 || !ok6 {
 		return time.Time{}, fmt.Errorf("fecha inválida %q", s)
 	}
 	loc, err := zonaDe(s[21:26])
@@ -187,12 +189,12 @@ func zonaDe(off string) (*time.Location, error) {
 	if !ok1 || !ok2 {
 		return nil, fmt.Errorf("offset inválido %q", off)
 	}
-	min := hh*60 + mm
+	minutos := hh*60 + mm
 	if off[0] == '-' {
-		min = -min
+		minutos = -minutos
 	}
-	if loc, ok := zonasOffset[min]; ok {
+	if loc, ok := zonasOffset[minutos]; ok {
 		return loc, nil
 	}
-	return time.FixedZone(off, min*60), nil // offset no alineado a cuarto de hora
+	return time.FixedZone(off, minutos*60), nil // offset no alineado a cuarto de hora
 }

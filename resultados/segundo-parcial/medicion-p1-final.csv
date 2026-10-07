@@ -1,0 +1,6 @@
+version,archivo,lineas,ms,lineas_por_seg,heap_mb,total_alloc_mb,allocs_millones,num_gc
+p1-final,5m.log,5000000,3026.4,1652127,137.4,1429.0,7.04,20
+p1-final,5m.log,5000000,2856.3,1750534,137.2,1429.0,7.04,18
+p1-final,5m.log,5000000,2647.7,1888416,137.4,1429.0,7.04,18
+p1-final,5m.log,5000000,3028.7,1650850,137.6,1429.6,7.04,15
+p1-final,5m.log,5000000,2641.0,1893192,137.4,1429.0,7.04,18

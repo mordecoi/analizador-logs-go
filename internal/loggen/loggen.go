@@ -22,8 +22,10 @@ import (
 	"math/rand/v2"
 	"slices"
 	"sort"
-	"strings"
+	"strconv"
 	"time"
+
+	"parcial1/internal/agregado"
 )
 
 // layoutApache es el formato de fecha del log (idéntico al de Apache).
@@ -38,13 +40,20 @@ type Opciones struct {
 	FraccionHeavy float64        // fracción de solicitudes desde el pool de IPs activas (default 0.6)
 	CantHeavyIPs  int            // tamaño del pool de IPs activas (default 200)
 	Zona          *time.Location // zona horaria del log (default -0300)
+	TamBuffer     int            // bytes del buffer de escritura (default 1 MiB; SinBuffer = cada línea directo)
 }
 
-// Par es una clave con su conteo, para los rankings de la verificación.
-type Par struct {
-	Clave  string `json:"clave"`
-	Conteo int    `json:"conteo"`
-}
+// SinBuffer como Opciones.TamBuffer escribe cada línea con una llamada a Write
+// del destino. Existe para medir cuánto aporta el buffer de escritura.
+const SinBuffer = -1
+
+// tamBufferPorDefecto: con 1 MiB una línea de ~180 B se agrupa con otras ~5800
+// antes de llegar al sistema operativo (ver BenchmarkEscrituraBuffer).
+const tamBufferPorDefecto = 1 << 20
+
+// Par es una clave con su conteo, para los rankings de la verificación. Es el
+// mismo tipo que usa el analizador, así los rankings se comparan directamente.
+type Par = agregado.Par[string]
 
 // Anomalia describe un patrón anómalo inyectado, con su ventana temporal exacta.
 type Anomalia struct {
@@ -82,6 +91,23 @@ var perfilHorario = [24]float64{
 	1.20, 1.00, 0.85, 0.75, 0.55, 0.40,
 }
 
+// Categorías de endpoint: determinan las distribuciones de status, bytes y latencia.
+const (
+	catPagina   = "pagina"
+	catAdmin    = "admin"
+	catAPI      = "api"
+	catEstatico = "estatico"
+	catSalud    = "salud"
+)
+
+// Métodos y protocolos que aparecen en más de un lugar del generador.
+const (
+	metodoGET  = "GET"
+	metodoPOST = "POST"
+	http10     = "HTTP/1.0"
+	http11     = "HTTP/1.1"
+)
+
 // defEndpoint asocia una ruta con su peso relativo y su categoría (que determina
 // las distribuciones de status, bytes y latencia).
 type defEndpoint struct {
@@ -91,33 +117,33 @@ type defEndpoint struct {
 }
 
 var endpoints = []defEndpoint{
-	{"/", 120, "pagina"},
-	{"/usr/login", 55, "pagina"},
-	{"/usr/register", 20, "pagina"},
-	{"/usr", 30, "pagina"},
-	{"/usr/admin", 8, "admin"},
-	{"/usr/admin/developer", 3, "admin"},
-	{"/logout", 12, "pagina"},
-	{"/about", 8, "pagina"},
-	{"/contact", 5, "pagina"},
-	{"/api/products", 70, "api"},
-	{"/api/products/detalle", 45, "api"},
-	{"/api/cart", 38, "api"},
-	{"/api/checkout", 12, "api"},
-	{"/api/orders", 18, "api"},
-	{"/api/search", 40, "api"},
-	{"/api/user/profile", 22, "api"},
-	{"/api/recommendations", 15, "api"},
-	{"/api/reviews", 10, "api"},
-	{"/static/css/main.css", 60, "estatico"},
-	{"/static/js/app.js", 58, "estatico"},
-	{"/static/js/vendor.js", 40, "estatico"},
-	{"/images/logo.png", 35, "estatico"},
-	{"/images/banner.jpg", 25, "estatico"},
-	{"/favicon.ico", 48, "estatico"},
-	{"/robots.txt", 6, "estatico"},
-	{"/health", 70, "salud"},
-	{"/metrics", 30, "salud"},
+	{"/", 120, catPagina},
+	{"/usr/login", 55, catPagina},
+	{"/usr/register", 20, catPagina},
+	{"/usr", 30, catPagina},
+	{"/usr/admin", 8, catAdmin},
+	{"/usr/admin/developer", 3, catAdmin},
+	{"/logout", 12, catPagina},
+	{"/about", 8, catPagina},
+	{"/contact", 5, catPagina},
+	{"/api/products", 70, catAPI},
+	{"/api/products/detalle", 45, catAPI},
+	{"/api/cart", 38, catAPI},
+	{"/api/checkout", 12, catAPI},
+	{"/api/orders", 18, catAPI},
+	{"/api/search", 40, catAPI},
+	{"/api/user/profile", 22, catAPI},
+	{"/api/recommendations", 15, catAPI},
+	{"/api/reviews", 10, catAPI},
+	{"/static/css/main.css", 60, catEstatico},
+	{"/static/js/app.js", 58, catEstatico},
+	{"/static/js/vendor.js", 40, catEstatico},
+	{"/images/logo.png", 35, catEstatico},
+	{"/images/banner.jpg", 25, catEstatico},
+	{"/favicon.ico", 48, catEstatico},
+	{"/robots.txt", 6, catEstatico},
+	{"/health", 70, catSalud},
+	{"/metrics", 30, catSalud},
 }
 
 // pesoStr es un valor de string con su peso, para los muestreadores.
@@ -128,11 +154,11 @@ type pesoStr struct {
 
 // estadosPorCategoria: distribución de status según el tipo de endpoint.
 var estadosPorCategoria = map[string][]pesoStr{
-	"estatico": {{"200", 78}, {"304", 18}, {"404", 4}},
-	"pagina":   {{"200", 88}, {"301", 3}, {"302", 3}, {"404", 4}, {"500", 2}},
-	"api":      {{"200", 86}, {"400", 3}, {"401", 2}, {"403", 1}, {"404", 3}, {"500", 3}, {"502", 2}},
-	"admin":    {{"200", 55}, {"403", 38}, {"500", 7}},
-	"salud":    {{"200", 992}, {"503", 8}},
+	catEstatico: {{"200", 78}, {"304", 18}, {"404", 4}},
+	catPagina:   {{"200", 88}, {"301", 3}, {"302", 3}, {"404", 4}, {"500", 2}},
+	catAPI:      {{"200", 86}, {"400", 3}, {"401", 2}, {"403", 1}, {"404", 3}, {"500", 3}, {"502", 2}},
+	catAdmin:    {{"200", 55}, {"403", 38}, {"500", 7}},
+	catSalud:    {{"200", 992}, {"503", 8}},
 }
 
 var uaNavegadores = []string{
@@ -231,13 +257,34 @@ type evento struct {
 	respMs   int
 }
 
-func (e *evento) escribir(bw *bufio.Writer) {
-	// Fprintf por línea no es lo más rápido, pero esto es un generador, no el
-	// código que vamos a perfilar: prima la legibilidad.
-	fmt.Fprintf(bw, "%s - %s [%s] \"%s %s %s\" %s %d %q %q %d\n",
-		e.ip, e.usuario, e.t.Format(layoutApache),
-		e.metodo, e.ruta, e.proto,
-		e.estado, e.bytes, e.referrer, e.ua, e.respMs)
+// agregarLinea agrega la línea formateada al final de b y lo devuelve, como las
+// funciones Append* de strconv. Reemplaza a un fmt.Fprintf por línea: produce
+// exactamente los mismos bytes (%q equivale a strconv.Quote) pero sin el costo
+// de interpretar el formato ni empaquetar cada argumento en una interfaz, y
+// reutilizando el mismo buffer para todas las líneas.
+func (e *evento) agregarLinea(b []byte) []byte {
+	b = append(b, e.ip...)
+	b = append(b, " - "...)
+	b = append(b, e.usuario...)
+	b = append(b, " ["...)
+	b = e.t.AppendFormat(b, layoutApache)
+	b = append(b, "] \""...)
+	b = append(b, e.metodo...)
+	b = append(b, ' ')
+	b = append(b, e.ruta...)
+	b = append(b, ' ')
+	b = append(b, e.proto...)
+	b = append(b, "\" "...)
+	b = append(b, e.estado...)
+	b = append(b, ' ')
+	b = strconv.AppendInt(b, int64(e.bytes), 10)
+	b = append(b, ' ')
+	b = strconv.AppendQuote(b, e.referrer)
+	b = append(b, ' ')
+	b = strconv.AppendQuote(b, e.ua)
+	b = append(b, ' ')
+	b = strconv.AppendInt(b, int64(e.respMs), 10)
+	return append(b, '\n')
 }
 
 func factorTemporal(t time.Time) float64 {
@@ -253,14 +300,14 @@ func ipAleatoria(r *rand.Rand) string {
 }
 
 func metodoDe(r *rand.Rand, categoria string) string {
-	if categoria == "estatico" || categoria == "salud" {
-		return "GET"
+	if categoria == catEstatico || categoria == catSalud {
+		return metodoGET
 	}
 	switch u := r.Float64(); {
 	case u < 0.72:
-		return "GET"
+		return metodoGET
 	case u < 0.90:
-		return "POST"
+		return metodoPOST
 	case u < 0.96:
 		return "PUT"
 	default:
@@ -270,9 +317,9 @@ func metodoDe(r *rand.Rand, categoria string) string {
 
 func protoDe(r *rand.Rand) string {
 	if r.Float64() < 0.08 {
-		return "HTTP/1.0"
+		return http10
 	}
-	return "HTTP/1.1"
+	return http11
 }
 
 func bytesDe(r *rand.Rand, categoria, estado string) int {
@@ -284,13 +331,13 @@ func bytesDe(r *rand.Rand, categoria, estado string) int {
 	}
 	var base, sigma float64
 	switch categoria {
-	case "estatico":
+	case catEstatico:
 		base, sigma = 60000, 0.5
-	case "pagina":
+	case catPagina:
 		base, sigma = 12000, 0.5
-	case "api":
+	case catAPI:
 		base, sigma = 1500, 0.6
-	case "admin":
+	case catAdmin:
 		base, sigma = 1800, 0.4
 	default: // salud
 		base, sigma = 15, 0.3
@@ -311,15 +358,15 @@ func latenciaMs(r *rand.Rand, categoria, ruta, estado string) int {
 	}
 	var lo, hi int
 	switch categoria {
-	case "salud":
+	case catSalud:
 		lo, hi = 1, 6
-	case "estatico":
+	case catEstatico:
 		lo, hi = 2, 25
-	case "pagina":
+	case catPagina:
 		lo, hi = 20, 140
-	case "api":
+	case catAPI:
 		lo, hi = 25, 160
-	case "admin":
+	case catAdmin:
 		lo, hi = 12, 70
 	default:
 		lo, hi = 10, 80
@@ -348,10 +395,61 @@ func uaDe(r *rand.Rand, esHeavy bool) string {
 
 // Generar escribe opts.Lineas líneas de log en w y devuelve la verificación.
 // No cierra w; sí vacía su propio buffer antes de volver.
+//
+// El log se arma como un merge cronológico de cuatro corrientes ya ordenadas:
+// la corriente base (Poisson no homogéneo) y las tres anomalías, que se
+// construyen enteras antes de empezar porque son chicas.
 func Generar(w io.Writer, opts Opciones) (Verificacion, error) {
 	if opts.Lineas <= 0 {
 		return Verificacion{}, fmt.Errorf("loggen: Lineas debe ser > 0, es %d", opts.Lineas)
 	}
+	opts = completarOpciones(opts)
+	r := nuevoRand(opts.Semilla)
+	m := nuevosMuestreadores(r, opts)
+	spanSeg := float64(opts.Lineas) / opts.TasaPorSeg
+
+	rafagaBuf, rafagaAnom := construirRafaga(r, opts, spanSeg)
+	picoBuf, picoAnom := construirPico5xx(r, opts, spanSeg, m.heavy, m.usuario)
+	escaneoBuf, escaneoAnom := construirEscaneo(r, opts, spanSeg, m.rutaACategoria)
+	anoms := [][]evento{rafagaBuf, picoBuf, escaneoBuf}
+
+	base := nuevaCorrienteBase(r, opts, m)
+	esc := nuevoEscritor(w, opts.TamBuffer)
+	acu := nuevoAcumulador(m.esHeavyIP)
+
+	sig := base.siguiente()
+	for escritas := 0; escritas < opts.Lineas; escritas++ {
+		e := &sig
+		elegida := -1 // -1 = corriente base
+		for k, a := range anoms {
+			if len(a) > 0 && a[0].t.Before(e.t) {
+				e, elegida = &anoms[k][0], k
+			}
+		}
+		if err := esc.escribir(e); err != nil {
+			return Verificacion{}, err
+		}
+		acu.registrar(e)
+		if elegida == -1 {
+			sig = base.siguiente()
+		} else {
+			anoms[elegida] = anoms[elegida][1:]
+		}
+	}
+	if err := esc.vaciar(); err != nil {
+		return Verificacion{}, err
+	}
+
+	ver := acu.verificacion()
+	ver.Semilla = opts.Semilla
+	ver.Lineas = opts.Lineas
+	ver.Desde = opts.Desde
+	ver.Anomalias = []Anomalia{rafagaAnom, picoAnom, escaneoAnom}
+	return ver, nil
+}
+
+// completarOpciones reemplaza los ceros de opts por los valores por defecto.
+func completarOpciones(opts Opciones) Opciones {
 	if opts.TasaPorSeg <= 0 {
 		opts.TasaPorSeg = 1.65
 	}
@@ -369,28 +467,48 @@ func Generar(w io.Writer, opts Opciones) (Verificacion, error) {
 	} else {
 		opts.Desde = opts.Desde.In(opts.Zona)
 	}
+	if opts.TamBuffer == 0 {
+		opts.TamBuffer = tamBufferPorDefecto
+	}
+	return opts
+}
 
-	semUsada := opts.Semilla
-	var r *rand.Rand
-	if opts.Semilla == 0 {
-		r = rand.New(rand.NewPCG(1, 2))
-	} else {
-		r = rand.New(rand.NewPCG(opts.Semilla, opts.Semilla^0x9e3779b97f4a7c15))
+// nuevoRand devuelve la fuente de números aleatorios; la semilla 0 es una
+// semilla fija, para que la corrida por defecto sea reproducible.
+func nuevoRand(semilla uint64) *rand.Rand {
+	if semilla == 0 {
+		return rand.New(rand.NewPCG(1, 2))
+	}
+	return rand.New(rand.NewPCG(semilla, semilla^0x9e3779b97f4a7c15))
+}
+
+// muestreadores agrupa las distribuciones de las que sale cada campo.
+type muestreadores struct {
+	endpoint       *muestreador
+	estado         map[string]*muestreador // categoría → distribución de status
+	heavy          *muestreador            // pool de IPs de alta actividad (Zipf)
+	usuario        *muestreador
+	esHeavyIP      map[string]bool
+	rutaACategoria map[string]string
+}
+
+func nuevosMuestreadores(r *rand.Rand, opts Opciones) muestreadores {
+	m := muestreadores{
+		estado:         make(map[string]*muestreador, len(estadosPorCategoria)),
+		esHeavyIP:      make(map[string]bool, opts.CantHeavyIPs),
+		rutaACategoria: make(map[string]string, len(endpoints)),
 	}
 
-	// --- Muestreadores -------------------------------------------------------
 	rutas := make([]string, len(endpoints))
 	pesosEp := make([]float64, len(endpoints))
-	rutaACategoria := make(map[string]string, len(endpoints))
 	for i, d := range endpoints {
 		rutas[i], pesosEp[i] = d.ruta, d.peso
-		rutaACategoria[d.ruta] = d.categoria
+		m.rutaACategoria[d.ruta] = d.categoria
 	}
-	endpointMues := nuevoMuestreador(rutas, pesosEp)
+	m.endpoint = nuevoMuestreador(rutas, pesosEp)
 
-	estadoMues := make(map[string]*muestreador, len(estadosPorCategoria))
 	for cat, pares := range estadosPorCategoria {
-		estadoMues[cat] = nuevoMuestreadorPares(pares)
+		m.estado[cat] = nuevoMuestreadorPares(pares)
 	}
 
 	heavyIPs := make([]string, opts.CantHeavyIPs)
@@ -398,150 +516,146 @@ func Generar(w io.Writer, opts Opciones) (Verificacion, error) {
 	for i := range heavyIPs {
 		heavyIPs[i] = ipAleatoria(r)
 		pesosHeavy[i] = 1.0 / math.Pow(float64(i+1), 0.9) // Zipf
+		m.esHeavyIP[heavyIPs[i]] = true
 	}
-	heavyMues := nuevoMuestreador(heavyIPs, pesosHeavy)
-	esHeavyIP := make(map[string]bool, opts.CantHeavyIPs)
-	for _, ip := range heavyIPs {
-		esHeavyIP[ip] = true
-	}
+	m.heavy = nuevoMuestreador(heavyIPs, pesosHeavy)
 
 	pesosNombre := make([]float64, len(nombres))
 	for i := range pesosNombre {
 		pesosNombre[i] = 1.0 / math.Pow(float64(i+1), 0.7)
 	}
-	usuarioMues := nuevoMuestreador(nombres, pesosNombre)
+	m.usuario = nuevoMuestreador(nombres, pesosNombre)
+	return m
+}
 
+// corrienteBase produce el tráfico normal: cada llamada a siguiente avanza el
+// reloj un intervalo exponencial cuya tasa sigue la curva horaria.
+type corrienteBase struct {
+	r        *rand.Rand
+	opts     Opciones
+	m        muestreadores
+	reloj    time.Time
+	tasaBase float64
+}
+
+func nuevaCorrienteBase(r *rand.Rand, opts Opciones, m muestreadores) *corrienteBase {
 	// tasaBase se calibra para que la tasa media emitida ≈ opts.TasaPorSeg
 	// una vez aplicada la modulación horaria.
 	var sumaPerfil float64
 	for _, v := range perfilHorario {
 		sumaPerfil += v
 	}
-	tasaBase := opts.TasaPorSeg / (sumaPerfil / 24)
-
-	spanSeg := float64(opts.Lineas) / opts.TasaPorSeg
-
-	// --- Anomalías (se construyen antes de la corriente base) ---------------
-	rafagaBuf, rafagaAnom := construirRafaga(r, opts, spanSeg)
-	picoBuf, picoAnom := construirPico5xx(r, opts, spanSeg, heavyMues, usuarioMues)
-	escaneoBuf, escaneoAnom := construirEscaneo(r, opts, spanSeg, rutaACategoria)
-
-	type fuenteAnom struct {
-		buf []evento
-		i   int
+	return &corrienteBase{
+		r: r, opts: opts, m: m,
+		reloj:    opts.Desde,
+		tasaBase: opts.TasaPorSeg / (sumaPerfil / 24),
 	}
-	anoms := []*fuenteAnom{{buf: rafagaBuf}, {buf: picoBuf}, {buf: escaneoBuf}}
-
-	// --- Corriente base ----------------------------------------------------
-	reloj := opts.Desde
-	generarBase := func() evento {
-		lambda := tasaBase * factorTemporal(reloj)
-		reloj = reloj.Add(time.Duration(r.ExpFloat64() / lambda * float64(time.Second)))
-
-		ruta := endpointMues.elegir(r)
-		cat := rutaACategoria[ruta]
-		estado := estadoMues[cat].elegir(r)
-
-		var ip string
-		esHeavy := false
-		if r.Float64() < opts.FraccionHeavy {
-			ip, esHeavy = heavyMues.elegir(r), true
-		} else {
-			ip = ipAleatoria(r)
-		}
-
-		usuario := "-"
-		if (cat == "api" || cat == "admin") && r.Float64() < 0.6 {
-			usuario = usuarioMues.elegir(r)
-		}
-
-		return evento{
-			t: reloj, ip: ip, usuario: usuario,
-			metodo: metodoDe(r, cat), ruta: ruta, proto: protoDe(r),
-			estado: estado, bytes: bytesDe(r, cat, estado),
-			referrer: referrers[r.IntN(len(referrers))], ua: uaDe(r, esHeavy),
-			respMs: latenciaMs(r, cat, ruta, estado),
-		}
-	}
-
-	// --- Merge cronológico y conteo --------------------------------------
-	bw := bufio.NewWriterSize(w, 1<<20)
-
-	contEndpoint := make(map[string]int, len(endpoints)+len(rutasSondeo))
-	contEstado := make(map[string]int, 16)
-	contHeavy := make(map[string]int, opts.CantHeavyIPs)
-	var porHora [24]int
-	var ultima time.Time
-
-	escribir := func(e evento) {
-		e.escribir(bw)
-		contEndpoint[e.ruta]++
-		contEstado[e.estado]++
-		if esHeavyIP[e.ip] {
-			contHeavy[e.ip]++
-		}
-		porHora[e.t.Hour()]++
-		ultima = e.t
-	}
-
-	baseSig := generarBase()
-	for escritas := 0; escritas < opts.Lineas; escritas++ {
-		mejorT := baseSig.t
-		mejorIdx := -1 // -1 = corriente base
-		for k, a := range anoms {
-			if a.i < len(a.buf) && a.buf[a.i].t.Before(mejorT) {
-				mejorT, mejorIdx = a.buf[a.i].t, k
-			}
-		}
-		if mejorIdx == -1 {
-			escribir(baseSig)
-			baseSig = generarBase()
-		} else {
-			escribir(anoms[mejorIdx].buf[anoms[mejorIdx].i])
-			anoms[mejorIdx].i++
-		}
-	}
-
-	if err := bw.Flush(); err != nil {
-		return Verificacion{}, fmt.Errorf("loggen: al escribir: %w", err)
-	}
-
-	horaPico := 0
-	for h := 1; h < 24; h++ {
-		if porHora[h] > porHora[horaPico] {
-			horaPico = h
-		}
-	}
-
-	return Verificacion{
-		Semilla:            semUsada,
-		Lineas:             opts.Lineas,
-		Desde:              opts.Desde,
-		Hasta:              ultima,
-		Anomalias:          []Anomalia{rafagaAnom, picoAnom, escaneoAnom},
-		TopEndpoints:       topN(contEndpoint, 10),
-		TopEstados:         topN(contEstado, 10),
-		TopIPsActivas:      topN(contHeavy, 10),
-		SolicitudesPorHora: porHora,
-		HoraPico:           horaPico,
-	}, nil
 }
 
-func topN(m map[string]int, n int) []Par {
-	pares := make([]Par, 0, len(m))
-	for k, v := range m {
-		pares = append(pares, Par{Clave: k, Conteo: v})
+func (c *corrienteBase) siguiente() evento {
+	r := c.r
+	lambda := c.tasaBase * factorTemporal(c.reloj)
+	c.reloj = c.reloj.Add(time.Duration(r.ExpFloat64() / lambda * float64(time.Second)))
+
+	ruta := c.m.endpoint.elegir(r)
+	cat := c.m.rutaACategoria[ruta]
+	estado := c.m.estado[cat].elegir(r)
+
+	var ip string
+	esHeavy := false
+	if r.Float64() < c.opts.FraccionHeavy {
+		ip, esHeavy = c.m.heavy.elegir(r), true
+	} else {
+		ip = ipAleatoria(r)
 	}
-	slices.SortFunc(pares, func(a, b Par) int {
-		if a.Conteo != b.Conteo {
-			return b.Conteo - a.Conteo // descendente por conteo
-		}
-		return strings.Compare(a.Clave, b.Clave) // desempate estable
-	})
-	if len(pares) > n {
-		pares = pares[:n]
+
+	usuario := "-"
+	if (cat == catAPI || cat == catAdmin) && r.Float64() < 0.6 {
+		usuario = c.m.usuario.elegir(r)
 	}
-	return pares
+
+	return evento{
+		t: c.reloj, ip: ip, usuario: usuario,
+		metodo: metodoDe(r, cat), ruta: ruta, proto: protoDe(r),
+		estado: estado, bytes: bytesDe(r, cat, estado),
+		referrer: referrers[r.IntN(len(referrers))], ua: uaDe(r, esHeavy),
+		respMs: latenciaMs(r, cat, ruta, estado),
+	}
+}
+
+// escritor formatea cada evento en un buffer de línea reutilizado y lo manda
+// al destino, a través de un bufio.Writer salvo con SinBuffer.
+type escritor struct {
+	destino io.Writer
+	bw      *bufio.Writer // nil con SinBuffer
+	linea   []byte
+}
+
+func nuevoEscritor(w io.Writer, tamBuffer int) *escritor {
+	e := &escritor{destino: w, linea: make([]byte, 0, 512)}
+	if tamBuffer != SinBuffer {
+		e.bw = bufio.NewWriterSize(w, tamBuffer)
+		e.destino = e.bw
+	}
+	return e
+}
+
+func (e *escritor) escribir(ev *evento) error {
+	e.linea = ev.agregarLinea(e.linea[:0])
+	if _, err := e.destino.Write(e.linea); err != nil {
+		return fmt.Errorf("loggen: al escribir: %w", err)
+	}
+	return nil
+}
+
+func (e *escritor) vaciar() error {
+	if e.bw == nil {
+		return nil
+	}
+	if err := e.bw.Flush(); err != nil {
+		return fmt.Errorf("loggen: al escribir: %w", err)
+	}
+	return nil
+}
+
+// acumulador cuenta, mientras se escribe, los agregados exactos del ground truth.
+type acumulador struct {
+	endpoints map[string]int
+	estados   map[string]int
+	heavy     map[string]int // solo las IPs del pool activo: son las del top
+	esHeavyIP map[string]bool
+	porHora   [24]int
+	ultima    time.Time
+}
+
+func nuevoAcumulador(esHeavyIP map[string]bool) *acumulador {
+	return &acumulador{
+		endpoints: make(map[string]int, len(endpoints)+len(rutasSondeo)),
+		estados:   make(map[string]int, 16),
+		heavy:     make(map[string]int, len(esHeavyIP)),
+		esHeavyIP: esHeavyIP,
+	}
+}
+
+func (a *acumulador) registrar(e *evento) {
+	a.endpoints[e.ruta]++
+	a.estados[e.estado]++
+	if a.esHeavyIP[e.ip] {
+		a.heavy[e.ip]++
+	}
+	a.porHora[e.t.Hour()]++
+	a.ultima = e.t
+}
+
+func (a *acumulador) verificacion() Verificacion {
+	return Verificacion{
+		Hasta:              a.ultima,
+		TopEndpoints:       agregado.TopNSort(agregado.Mapa[string](a.endpoints), 10),
+		TopEstados:         agregado.TopNSort(agregado.Mapa[string](a.estados), 10),
+		TopIPsActivas:      agregado.TopNSort(agregado.Mapa[string](a.heavy), 10),
+		SolicitudesPorHora: a.porHora,
+		HoraPico:           agregado.HoraPico(a.porHora),
+	}
 }
 
 func ordenarPorTiempo(buf []evento) {
@@ -574,8 +688,8 @@ func construirRafaga(r *rand.Rand, opts Opciones, spanSeg float64) ([]evento, An
 		}
 		buf[i] = evento{
 			t:  ini.Add(time.Duration(r.Float64() * float64(dur))),
-			ip: ip, usuario: "-", metodo: "POST", ruta: "/usr/login", proto: "HTTP/1.1",
-			estado: estado, bytes: bytesDe(r, "pagina", estado),
+			ip: ip, usuario: "-", metodo: metodoPOST, ruta: "/usr/login", proto: http11,
+			estado: estado, bytes: bytesDe(r, catPagina, estado),
 			referrer: "-", ua: "python-requests/2.31.0", respMs: 30 + r.IntN(90),
 		}
 	}
@@ -611,8 +725,8 @@ func construirPico5xx(r *rand.Rand, opts Opciones, spanSeg float64, heavyMues, u
 		est := estados.elegir(r)
 		buf[i] = evento{
 			t:  ini.Add(time.Duration(r.Float64() * float64(dur))),
-			ip: ip, usuario: usuario, metodo: "POST", ruta: endpoint, proto: "HTTP/1.1",
-			estado: est, bytes: bytesDe(r, "api", est),
+			ip: ip, usuario: usuario, metodo: metodoPOST, ruta: endpoint, proto: http11,
+			estado: est, bytes: bytesDe(r, catAPI, est),
 			referrer: "-", ua: uaDe(r, esHeavy), respMs: 1000 + r.IntN(9000),
 		}
 	}
@@ -647,8 +761,8 @@ func construirEscaneo(r *rand.Rand, opts Opciones, spanSeg float64, rutaACategor
 			}
 			buf = append(buf, evento{
 				t:  ini.Add(time.Duration(r.Float64() * float64(dur))),
-				ip: ip, usuario: "-", metodo: "GET", ruta: ruta, proto: "HTTP/1.1",
-				estado: estado, bytes: bytesDe(r, "pagina", estado),
+				ip: ip, usuario: "-", metodo: metodoGET, ruta: ruta, proto: http11,
+				estado: estado, bytes: bytesDe(r, catPagina, estado),
 				referrer: "-", ua: "curl/7.81.0", respMs: 5 + r.IntN(40),
 			})
 		}

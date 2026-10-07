@@ -1,0 +1,31 @@
+goos: windows
+goarch: amd64
+pkg: parcial1/internal/parse
+cpu: AMD Ryzen 7 7730U with Radeon Graphics         
+                  │ C:/Users/solch/AppData/Local/Temp/parse-antes.txt │ C:/Users/solch/AppData/Local/Temp/parse-despues.txt │
+                  │                      sec/op                       │            sec/op             vs base               │
+Parsear/regex-16                                         5.596µ ±  2%                   7.733µ ± 26%  +38.18% (p=0.001 n=8)
+Parsear/manual-16                                        457.8n ± 14%                   475.2n ±  5%        ~ (p=0.083 n=8)
+geomean                                                  1.601µ                         1.917µ        +19.76%
+
+                  │ C:/Users/solch/AppData/Local/Temp/parse-antes.txt │ C:/Users/solch/AppData/Local/Temp/parse-despues.txt │
+                  │                        B/s                        │             B/s               vs base               │
+Parsear/regex-16                                         25.39Mi ± 9%                  18.38Mi ± 30%  -27.62% (p=0.001 n=8)
+Parsear/manual-16                                        310.4Mi ± 5%                  299.1Mi ±  3%        ~ (p=0.083 n=8)
+geomean                                                  88.77Mi                       74.14Mi        -16.48%
+
+                  │ C:/Users/solch/AppData/Local/Temp/parse-antes.txt │ C:/Users/solch/AppData/Local/Temp/parse-despues.txt │
+                  │                       B/op                        │            B/op              vs base                │
+Parsear/regex-16                                         386.0 ± 0%                      384.0 ± 0%  -0.52% (p=0.000 n=8)
+Parsear/manual-16                                        0.000 ± 0%                      0.000 ± 0%       ~ (p=1.000 n=8) ¹
+geomean                                                             ²                                -0.26%               ²
+¹ all samples are equal
+² summaries must be >0 to compute geomean
+
+                  │ C:/Users/solch/AppData/Local/Temp/parse-antes.txt │ C:/Users/solch/AppData/Local/Temp/parse-despues.txt │
+                  │                     allocs/op                     │          allocs/op           vs base                │
+Parsear/regex-16                                         2.000 ± 0%                      2.000 ± 0%       ~ (p=1.000 n=8) ¹
+Parsear/manual-16                                        0.000 ± 0%                      0.000 ± 0%       ~ (p=1.000 n=8) ¹
+geomean                                                             ²                                +0.00%               ²
+¹ all samples are equal
+² summaries must be >0 to compute geomean

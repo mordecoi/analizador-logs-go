@@ -1,15 +1,14 @@
-// Comando grafico: lee el CSV de mediciones (version,archivo,lineas,ms,...) y
-// dibuja la curva de escalabilidad tiempo-vs-líneas por versión en un SVG.
+// Package grafico dibuja la curva de escalabilidad tiempo-vs-líneas por versión
+// a partir del CSV de mediciones (version,archivo,lineas,ms,...), como SVG.
+//
 // Ejes log-log: n va de 10⁶ a 2·10⁷ y el tiempo de ~10² a ~10⁶ ms, así que en
 // escala lineal las curvas chicas serían invisibles; en log-log, además, una
 // complejidad O(n) se ve como recta de pendiente 1.
-//
-//	go run ./cmd/grafico -csv resultados/escalabilidad.csv -salida resultados/escalabilidad.svg
-package main
+package grafico
 
 import (
+	"cmp"
 	"encoding/csv"
-	"flag"
 	"fmt"
 	"math"
 	"os"
@@ -18,48 +17,38 @@ import (
 	"strings"
 )
 
-type punto struct {
-	n  float64 // líneas
-	ms float64
+// Series son los puntos (líneas, ms) de cada versión, más el orden en que las
+// versiones aparecen en el CSV (el de la leyenda).
+type Series struct {
+	Puntos map[string][]Punto
+	Orden  []string
+}
+
+// Punto es una medición: tiempo en milisegundos para n líneas.
+type Punto struct {
+	N  float64 // líneas
+	Ms float64
 }
 
 var colores = []string{"#c0392b", "#d68910", "#2471a3", "#1e8449", "#7d3c98", "#5d6d7e"}
 
-func main() {
-	rutaCSV := flag.String("csv", "resultados/escalabilidad.csv", "CSV de mediciones")
-	salida := flag.String("salida", "resultados/escalabilidad.svg", "SVG de salida")
-	titulo := flag.String("titulo", "Escalabilidad: tiempo vs líneas (log-log)", "título del gráfico")
-	flag.Parse()
-
-	series, orden, err := leer(*rutaCSV)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	if err := os.WriteFile(*salida, []byte(dibujar(series, orden, *titulo)), 0o644); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	fmt.Printf("gráfico escrito en %s (%d series)\n", *salida, len(orden))
-}
-
-// leer agrupa las filas del CSV por versión, ordenadas por n.
-func leer(ruta string) (map[string][]punto, []string, error) {
+// Leer agrupa las filas del CSV por versión, ordenadas por n.
+func Leer(ruta string) (Series, error) {
 	f, err := os.Open(ruta)
 	if err != nil {
-		return nil, nil, err
+		return Series{}, err
 	}
 	defer f.Close()
 
 	filas, err := csv.NewReader(f).ReadAll()
 	if err != nil {
-		return nil, nil, err
+		return Series{}, err
 	}
 	if len(filas) < 2 {
-		return nil, nil, fmt.Errorf("%s: sin datos", ruta)
+		return Series{}, fmt.Errorf("%s: sin datos", ruta)
 	}
 
-	series := make(map[string][]punto)
+	series := make(map[string][]Punto)
 	var orden []string // versiones en orden de aparición
 	for _, fila := range filas[1:] {
 		if len(fila) < 4 {
@@ -74,24 +63,17 @@ func leer(ruta string) (map[string][]punto, []string, error) {
 		if _, visto := series[v]; !visto {
 			orden = append(orden, v)
 		}
-		series[v] = append(series[v], punto{n, ms})
+		series[v] = append(series[v], Punto{n, ms})
 	}
 	for v := range series {
-		slices.SortFunc(series[v], func(a, b punto) int {
-			switch {
-			case a.n < b.n:
-				return -1
-			case a.n > b.n:
-				return 1
-			default:
-				return 0
-			}
-		})
+		slices.SortFunc(series[v], func(a, b Punto) int { return cmp.Compare(a.N, b.N) })
 	}
-	return series, orden, nil
+	return Series{Puntos: series, Orden: orden}, nil
 }
 
-func dibujar(series map[string][]punto, orden []string, titulo string) string {
+// Dibujar devuelve el SVG del gráfico log-log de las series.
+func Dibujar(s Series, titulo string) string {
+	series, orden := s.Puntos, s.Orden
 	const ancho, alto = 860.0, 520.0
 	const mIzq, mDer, mArr, mAba = 80.0, 190.0, 50.0, 60.0
 
@@ -100,8 +82,8 @@ func dibujar(series map[string][]punto, orden []string, titulo string) string {
 	minY, maxY := math.Inf(1), math.Inf(-1)
 	for _, pts := range series {
 		for _, p := range pts {
-			minX, maxX = math.Min(minX, p.n), math.Max(maxX, p.n)
-			minY, maxY = math.Min(minY, p.ms), math.Max(maxY, p.ms)
+			minX, maxX = math.Min(minX, p.N), math.Max(maxX, p.N)
+			minY, maxY = math.Min(minY, p.Ms), math.Max(maxY, p.Ms)
 		}
 	}
 	lx0, lx1 := math.Floor(math.Log10(minX)), math.Ceil(math.Log10(maxX))
@@ -138,13 +120,13 @@ func dibujar(series map[string][]punto, orden []string, titulo string) string {
 		color := colores[i%len(colores)]
 		var camino []string
 		for _, p := range pts {
-			camino = append(camino, fmt.Sprintf("%.1f,%.1f", x(p.n), y(p.ms)))
+			camino = append(camino, fmt.Sprintf("%.1f,%.1f", x(p.N), y(p.Ms)))
 		}
 		fmt.Fprintf(&b, `<polyline points="%s" fill="none" stroke="%s" stroke-width="2.5"/>`+"\n", strings.Join(camino, " "), color)
 		for _, p := range pts {
-			fmt.Fprintf(&b, `<circle cx="%.1f" cy="%.1f" r="4" fill="%s"/>`+"\n", x(p.n), y(p.ms), color)
+			fmt.Fprintf(&b, `<circle cx="%.1f" cy="%.1f" r="4" fill="%s"/>`+"\n", x(p.N), y(p.Ms), color)
 			fmt.Fprintf(&b, `<text x="%.1f" y="%.1f" font-size="11" text-anchor="middle" fill="%s">%s</text>`+"\n",
-				x(p.n), y(p.ms)-9, color, etiquetaMs(p.ms))
+				x(p.N), y(p.Ms)-9, color, etiquetaMs(p.Ms))
 		}
 		// leyenda
 		ly := mArr + 8 + float64(i)*22

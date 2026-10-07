@@ -1,0 +1,48 @@
+goos: windows
+goarch: amd64
+pkg: parcial1/internal/loggen
+cpu: AMD Ryzen 7 7730U with Radeon Graphics         
+BenchmarkEscrituraBuffer/sin-buffer-16         	       3	 477498600 ns/op	  20.06 MB/s	  607632 B/op	   20132 allocs/op
+BenchmarkEscrituraBuffer/sin-buffer-16         	       3	 513958167 ns/op	  18.64 MB/s	  607349 B/op	   20126 allocs/op
+BenchmarkEscrituraBuffer/sin-buffer-16         	       2	 604094300 ns/op	  15.86 MB/s	  607776 B/op	   20128 allocs/op
+BenchmarkEscrituraBuffer/sin-buffer-16         	       2	 625227000 ns/op	  15.32 MB/s	  607872 B/op	   20129 allocs/op
+BenchmarkEscrituraBuffer/sin-buffer-16         	       2	 680625600 ns/op	  14.07 MB/s	  608336 B/op	   20135 allocs/op
+BenchmarkEscrituraBuffer/sin-buffer-16         	       2	 593767600 ns/op	  16.13 MB/s	  608312 B/op	   20134 allocs/op
+BenchmarkEscrituraBuffer/4KiB-16               	       5	 233444540 ns/op	  41.03 MB/s	  612008 B/op	   20128 allocs/op
+BenchmarkEscrituraBuffer/4KiB-16               	       5	 233953740 ns/op	  40.94 MB/s	  611976 B/op	   20128 allocs/op
+BenchmarkEscrituraBuffer/4KiB-16               	       5	 232348300 ns/op	  41.23 MB/s	  611995 B/op	   20128 allocs/op
+BenchmarkEscrituraBuffer/4KiB-16               	       5	 240175640 ns/op	  39.88 MB/s	  612011 B/op	   20128 allocs/op
+BenchmarkEscrituraBuffer/4KiB-16               	       5	 227211320 ns/op	  42.16 MB/s	  612168 B/op	   20130 allocs/op
+BenchmarkEscrituraBuffer/4KiB-16               	       5	 227254880 ns/op	  42.15 MB/s	  611985 B/op	   20128 allocs/op
+BenchmarkEscrituraBuffer/64KiB-16              	       7	 199659229 ns/op	  47.98 MB/s	  673091 B/op	   20128 allocs/op
+BenchmarkEscrituraBuffer/64KiB-16              	       6	 207382800 ns/op	  46.19 MB/s	  673198 B/op	   20128 allocs/op
+BenchmarkEscrituraBuffer/64KiB-16              	       6	 194102183 ns/op	  49.35 MB/s	  673364 B/op	   20130 allocs/op
+BenchmarkEscrituraBuffer/64KiB-16              	       6	 200773833 ns/op	  47.71 MB/s	  673196 B/op	   20127 allocs/op
+BenchmarkEscrituraBuffer/64KiB-16              	       7	 194987914 ns/op	  49.13 MB/s	  672956 B/op	   20126 allocs/op
+BenchmarkEscrituraBuffer/64KiB-16              	       6	 187394800 ns/op	  51.12 MB/s	  673089 B/op	   20126 allocs/op
+BenchmarkEscrituraBuffer/1MiB-16               	       7	 185007129 ns/op	  51.78 MB/s	 1658356 B/op	   20134 allocs/op
+BenchmarkEscrituraBuffer/1MiB-16               	       6	 194651883 ns/op	  49.21 MB/s	 1658893 B/op	   20135 allocs/op
+BenchmarkEscrituraBuffer/1MiB-16               	       6	 198994100 ns/op	  48.14 MB/s	 1658914 B/op	   20135 allocs/op
+BenchmarkEscrituraBuffer/1MiB-16               	       7	 198815871 ns/op	  48.18 MB/s	 1658686 B/op	   20130 allocs/op
+BenchmarkEscrituraBuffer/1MiB-16               	       7	 212542329 ns/op	  45.07 MB/s	 1658306 B/op	   20133 allocs/op
+BenchmarkEscrituraBuffer/1MiB-16               	       6	 196934350 ns/op	  48.64 MB/s	 1658773 B/op	   20133 allocs/op
+BenchmarkEscrituraBuffer/8MiB-16               	       5	 220689640 ns/op	  43.41 MB/s	 8999982 B/op	   20134 allocs/op
+BenchmarkEscrituraBuffer/8MiB-16               	       6	 197748233 ns/op	  48.44 MB/s	 9000684 B/op	   20133 allocs/op
+BenchmarkEscrituraBuffer/8MiB-16               	       7	 203555814 ns/op	  47.06 MB/s	 8999864 B/op	   20132 allocs/op
+BenchmarkEscrituraBuffer/8MiB-16               	       7	 202567214 ns/op	  47.29 MB/s	 8999971 B/op	   20134 allocs/op
+BenchmarkEscrituraBuffer/8MiB-16               	       6	 195527583 ns/op	  48.99 MB/s	 8999965 B/op	   20133 allocs/op
+BenchmarkEscrituraBuffer/8MiB-16               	       6	 198767167 ns/op	  48.19 MB/s	 9000069 B/op	   20135 allocs/op
+BenchmarkFormatoLinea/fprintf-16               	  394630	      3995 ns/op	     269 B/op	      11 allocs/op
+BenchmarkFormatoLinea/fprintf-16               	  309139	      3871 ns/op	     269 B/op	      11 allocs/op
+BenchmarkFormatoLinea/fprintf-16               	  337098	      3545 ns/op	     269 B/op	      11 allocs/op
+BenchmarkFormatoLinea/fprintf-16               	  324739	      3689 ns/op	     269 B/op	      11 allocs/op
+BenchmarkFormatoLinea/fprintf-16               	  404673	      3722 ns/op	     269 B/op	      11 allocs/op
+BenchmarkFormatoLinea/fprintf-16               	  364359	      3938 ns/op	     269 B/op	      11 allocs/op
+BenchmarkFormatoLinea/append-16                	  500846	      2144 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFormatoLinea/append-16                	  560926	      2130 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFormatoLinea/append-16                	  489510	      2107 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFormatoLinea/append-16                	  648441	      2015 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFormatoLinea/append-16                	  693520	      2003 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFormatoLinea/append-16                	  505234	      2467 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	parcial1/internal/loggen	54.057s

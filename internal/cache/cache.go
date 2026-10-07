@@ -18,13 +18,14 @@ import (
 	"encoding/gob"
 	"fmt"
 	"os"
+	"strconv"
 
 	"parcial1/internal/agregado"
 	"parcial1/internal/parse"
 )
 
 // versionCache invalida caches viejos si cambia el formato de Contadores.
-const versionCache = 1
+const versionCache = 2 // 2: Endpoints/IPs/Usuarios pasaron a ser *agregado.Contador
 
 // archivoCache es lo que se serializa: los agregados más los metadatos del log
 // con el que se calcularon, para poder detectar que el log cambió.
@@ -99,20 +100,26 @@ func Guardar(rutaLog string, c *agregado.Contadores) error {
 type Consultas struct {
 	Cont *agregado.Contadores
 
-	met    agregado.Metodo
-	topStr map[string][]agregado.Par[string]
-	topInt map[string][]agregado.Par[int]
-	sucio  bool
+	met        agregado.Metodo
+	resultados map[consulta][]agregado.Par[string]
+	sucio      bool
 
 	Hits, Misses int
 }
 
+// consulta identifica una respuesta cacheada. Un struct como clave evita armar
+// un string "métrica:n" con fmt.Sprintf en cada consulta.
+type consulta struct {
+	metrica string
+	n       int
+}
+
+// NuevasConsultas envuelve los contadores c; los rankings se calculan con met.
 func NuevasConsultas(c *agregado.Contadores, met agregado.Metodo) *Consultas {
 	return &Consultas{
-		Cont:   c,
-		met:    met,
-		topStr: make(map[string][]agregado.Par[string]),
-		topInt: make(map[string][]agregado.Par[int]),
+		Cont:       c,
+		met:        met,
+		resultados: make(map[consulta][]agregado.Par[string]),
 	}
 }
 
@@ -123,49 +130,54 @@ func (q *Consultas) Agregar(e parse.Entrada) {
 	q.sucio = true
 }
 
-// limpiarSiSucio descarta el cache si entraron datos desde la última consulta.
-func (q *Consultas) limpiarSiSucio() {
+// consultar devuelve la respuesta cacheada para (métrica, n) o la calcula.
+// Es el único lugar donde se decide hit, miss e invalidación.
+func (q *Consultas) consultar(metrica string, n int, calcular func() []agregado.Par[string]) []agregado.Par[string] {
 	if q.sucio {
-		clear(q.topStr)
-		clear(q.topInt)
+		clear(q.resultados)
 		q.sucio = false
 	}
-}
-
-func (q *Consultas) topDeStr(clave string, m map[string]int, n int) []agregado.Par[string] {
-	q.limpiarSiSucio()
-	k := fmt.Sprintf("%s:%d", clave, n)
-	if v, ok := q.topStr[k]; ok {
+	k := consulta{metrica, n}
+	if v, ok := q.resultados[k]; ok {
 		q.Hits++
 		return v
 	}
 	q.Misses++
-	v := agregado.TopN(m, n, q.met)
-	q.topStr[k] = v
+	v := calcular()
+	q.resultados[k] = v
 	return v
 }
 
+// Endpoints devuelve las n rutas más solicitadas.
 func (q *Consultas) Endpoints(n int) []agregado.Par[string] {
-	return q.topDeStr("endpoints", q.Cont.Endpoints, n)
+	return q.consultar("endpoints", n, func() []agregado.Par[string] {
+		return agregado.TopN(q.Cont.Endpoints, n, q.met)
+	})
 }
 
+// IPs devuelve las n IPs con más solicitudes.
 func (q *Consultas) IPs(n int) []agregado.Par[string] {
-	return q.topDeStr("ips", q.Cont.IPs, n)
+	return q.consultar("ips", n, func() []agregado.Par[string] {
+		return agregado.TopN(q.Cont.IPs, n, q.met)
+	})
 }
 
+// Usuarios devuelve los n usuarios autenticados más activos.
 func (q *Consultas) Usuarios(n int) []agregado.Par[string] {
-	return q.topDeStr("usuarios", q.Cont.Usuarios, n)
+	return q.consultar("usuarios", n, func() []agregado.Par[string] {
+		return agregado.TopN(q.Cont.Usuarios, n, q.met)
+	})
 }
 
-func (q *Consultas) Estados(n int) []agregado.Par[int] {
-	q.limpiarSiSucio()
-	k := fmt.Sprintf("estados:%d", n)
-	if v, ok := q.topInt[k]; ok {
-		q.Hits++
-		return v
-	}
-	q.Misses++
-	v := agregado.TopN(q.Cont.Estados, n, q.met)
-	q.topInt[k] = v
-	return v
+// Estados devuelve los n códigos de estado más frecuentes, con la clave ya
+// convertida a texto para que todos los rankings sean del mismo tipo.
+func (q *Consultas) Estados(n int) []agregado.Par[string] {
+	return q.consultar("estados", n, func() []agregado.Par[string] {
+		crudo := agregado.TopN(agregado.Mapa[int](q.Cont.Estados), n, q.met)
+		res := make([]agregado.Par[string], len(crudo))
+		for i, p := range crudo {
+			res[i] = agregado.Par[string]{Clave: strconv.Itoa(p.Clave), Conteo: p.Conteo}
+		}
+		return res
+	})
 }

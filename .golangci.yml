@@ -1,0 +1,86 @@
+# Configuración de golangci-lint v2: el analizador de calidad del proyecto.
+#
+#   golangci-lint run ./...
+#
+# Agrupa decenas de linters en una sola pasada. Los habilitados cubren las
+# cuatro dimensiones que pide el segundo parcial:
+#   - errores y bugs:          govet, staticcheck, errcheck, ineffassign, unused
+#   - código redundante:       dupl, goconst, unparam, unconvert, wastedassign
+#   - complejidad:             gocyclo, gocognit, funlen, nestif
+#   - legibilidad y estilo:    revive, gofmt, goimports, predeclared,
+#                              asciicheck, godot
+#   - rendimiento:             prealloc, perfsprint
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
+    - dupl
+    - goconst
+    - unparam
+    - unconvert
+    - wastedassign
+    - gocyclo
+    - gocognit
+    - funlen
+    - nestif
+    - revive
+    - predeclared
+    - asciicheck
+    - godot
+    - prealloc
+    - perfsprint
+    - gosec
+
+  settings:
+    dupl:
+      threshold: 70 # tokens repetidos a partir de los cuales se reporta
+    gocyclo:
+      min-complexity: 15
+    gocognit:
+      min-complexity: 20
+    funlen:
+      lines: 70
+      statements: 45
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    revive:
+      rules:
+        - name: exported # todo identificador exportado lleva doc comment
+        - name: package-comments
+        - name: var-naming
+        - name: indent-error-flow
+        - name: early-return
+        - name: unused-parameter
+        - name: redefines-builtin-id
+        - name: error-strings
+        - name: receiver-naming
+        - name: empty-block
+        - name: superfluous-else
+    gosec:
+      excludes:
+        - G304 # lectura de archivos por ruta variable: es la función del CLI
+        - G404 # math/rand en el generador sintético: no es criptografía
+        - G115 # conversiones int↔int64 sobre tamaños de archivo acotados
+        - G306 # permisos 0644 en archivos de salida: son reportes, no secretos
+
+  exclusions:
+    # fmt.Fprintf a stdout, Close de archivos de solo lectura, etc.
+    # (misspell queda afuera: solo conoce inglés y el código está en castellano)
+    presets:
+      - std-error-handling
+    rules:
+      # los tests y benchmarks pueden ser largos y repetitivos por diseño
+      - path: _test\.go
+        linters: [funlen, dupl, gocognit, goconst, errcheck]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

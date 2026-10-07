@@ -5,18 +5,18 @@ import (
 	"container/heap"
 )
 
-// montículoMin es un min-heap acotado: la raíz es siempre el "peor" par según
+// monticuloMin es un min-heap acotado: la raíz es siempre el "peor" par según
 // peorQue (menor conteo; a igualdad, clave mayor). Se mantiene con a lo sumo n
 // elementos, así que al recorrer las u claves del mapa siempre queda el Top-n.
-type montículoMin[K cmp.Ordered] []Par[K]
+type monticuloMin[K cmp.Ordered] []Par[K]
 
-func (h montículoMin[K]) Len() int           { return len(h) }
-func (h montículoMin[K]) Less(i, j int) bool { return peorQue(h[i], h[j]) }
-func (h montículoMin[K]) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h monticuloMin[K]) Len() int           { return len(h) }
+func (h monticuloMin[K]) Less(i, j int) bool { return peorQue(h[i], h[j]) }
+func (h monticuloMin[K]) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
-func (h *montículoMin[K]) Push(x any) { *h = append(*h, x.(Par[K])) }
+func (h *monticuloMin[K]) Push(x any) { *h = append(*h, x.(Par[K])) }
 
-func (h *montículoMin[K]) Pop() any {
+func (h *monticuloMin[K]) Pop() any {
 	viejo := *h
 	n := len(viejo)
 	p := viejo[n-1]
@@ -31,12 +31,12 @@ func (h *montículoMin[K]) Pop() any {
 //
 // Complejidad O(u·log n); espacio O(n). Frente a TopNSort (O(u·log u), espacio
 // O(u)) conviene cuando n ≪ u — el caso del ranking de IPs, donde u ≈ millones.
-func TopNHeap[K cmp.Ordered](m map[K]int, n int) []Par[K] {
+func TopNHeap[K cmp.Ordered](f Fuente[K], n int) []Par[K] {
 	if n <= 0 {
 		return nil
 	}
-	h := make(montículoMin[K], 0, n+1)
-	for k, v := range m {
+	h := make(monticuloMin[K], 0, n+1)
+	for k, v := range f.All() {
 		nuevo := Par[K]{Clave: k, Conteo: v}
 		if h.Len() < n {
 			heap.Push(&h, nuevo)

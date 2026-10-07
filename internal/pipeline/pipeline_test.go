@@ -1,15 +1,17 @@
 package pipeline_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
 	"parcial1/internal/loggen"
 	"parcial1/internal/parse"
 	"parcial1/internal/pipeline"
 )
+
+var ctx = context.Background()
 
 // archivoDePrueba genera un log reproducible en un archivo temporal.
 func archivoDePrueba(t *testing.T, lineas int) string {
@@ -32,7 +34,7 @@ func archivoDePrueba(t *testing.T, lineas int) string {
 // límites a comienzos de línea.
 func TestConcurrenteIgualQueSecuencial(t *testing.T) {
 	ruta := archivoDePrueba(t, 20_000)
-	seq, erroresSeq, err := pipeline.Secuencial(ruta, parse.ParsearManual)
+	seq, erroresSeq, err := pipeline.Secuencial(ctx, ruta, parse.ParsearManual)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,14 +43,14 @@ func TestConcurrenteIgualQueSecuencial(t *testing.T) {
 	}
 
 	for _, w := range []int{2, 3, 7, 8, 16, 61} {
-		conc, errores, err := pipeline.Concurrente(ruta, w, parse.ParsearManual)
+		conc, errores, err := pipeline.Concurrente(ctx, ruta, w, parse.ParsearManual)
 		if err != nil {
 			t.Fatalf("workers=%d: %v", w, err)
 		}
 		if errores != 0 {
 			t.Fatalf("workers=%d: %d errores", w, errores)
 		}
-		if !reflect.DeepEqual(seq, conc) {
+		if !seq.Igual(conc) {
 			t.Fatalf("workers=%d: contadores distintos (total %d vs %d)", w, seq.Total, conc.Total)
 		}
 	}
@@ -56,15 +58,15 @@ func TestConcurrenteIgualQueSecuencial(t *testing.T) {
 
 func TestConcurrenteMutexIgualQueSecuencial(t *testing.T) {
 	ruta := archivoDePrueba(t, 5_000)
-	seq, _, err := pipeline.Secuencial(ruta, parse.ParsearManual)
+	seq, _, err := pipeline.Secuencial(ctx, ruta, parse.ParsearManual)
 	if err != nil {
 		t.Fatal(err)
 	}
-	conc, _, err := pipeline.ConcurrenteMutex(ruta, 8, parse.ParsearManual)
+	conc, _, err := pipeline.ConcurrenteMutex(ctx, ruta, 8, parse.ParsearManual)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(seq, conc) {
+	if !seq.Igual(conc) {
 		t.Fatalf("contadores distintos (total %d vs %d)", seq.Total, conc.Total)
 	}
 }
@@ -72,15 +74,15 @@ func TestConcurrenteMutexIgualQueSecuencial(t *testing.T) {
 // TestArchivoMinusculo: más workers que líneas y archivos borde.
 func TestArchivoMinusculo(t *testing.T) {
 	ruta := archivoDePrueba(t, 3)
-	seq, _, err := pipeline.Secuencial(ruta, parse.ParsearManual)
+	seq, _, err := pipeline.Secuencial(ctx, ruta, parse.ParsearManual)
 	if err != nil {
 		t.Fatal(err)
 	}
-	conc, _, err := pipeline.Concurrente(ruta, 12, parse.ParsearManual)
+	conc, _, err := pipeline.Concurrente(ctx, ruta, 12, parse.ParsearManual)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(seq, conc) {
+	if !seq.Igual(conc) {
 		t.Fatal("contadores distintos con más workers que líneas")
 	}
 	if conc.Total != 3 {
@@ -93,7 +95,7 @@ func TestArchivoVacio(t *testing.T) {
 	if err := os.WriteFile(ruta, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	conc, errores, err := pipeline.Concurrente(ruta, 4, parse.ParsearManual)
+	conc, errores, err := pipeline.Concurrente(ctx, ruta, 4, parse.ParsearManual)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +115,7 @@ mas basura
 	if err := os.WriteFile(ruta, []byte(contenido), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cont, errores, err := pipeline.Concurrente(ruta, 3, parse.ParsearManual)
+	cont, errores, err := pipeline.Concurrente(ctx, ruta, 3, parse.ParsearManual)
 	if err != nil {
 		t.Fatal(err)
 	}

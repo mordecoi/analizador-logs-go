@@ -2,16 +2,16 @@ package agregado_test
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"testing"
 
 	"parcial1/internal/agregado"
-	"parcial1/internal/bench"
 )
 
 // mapaSesgado arma un mapa de u claves con conteos tipo Zipf (pocas claves con
 // conteo alto, cola larga cerca de 1) — la forma real de los datos del log.
 func mapaSesgado(u int) map[int]int {
-	r := bench.NuevoRand()
+	r := rand.New(rand.NewPCG(1, 2)) // semilla fija: corridas reproducibles
 	m := make(map[int]int, u)
 	for i := 0; i < u; i++ {
 		m[i] = 1 + int(1e6/float64(i+1)) + r.IntN(3)
@@ -33,7 +33,7 @@ var casosTopN = []struct{ u, k int }{
 func BenchmarkTopN(b *testing.B) {
 	impls := []struct {
 		nombre string
-		fn     func(map[int]int, int) []agregado.Par[int]
+		fn     func(agregado.Fuente[int], int) []agregado.Par[int]
 	}{
 		{"sort", agregado.TopNSort[int]},
 		{"heap", agregado.TopNHeap[int]},
@@ -44,7 +44,7 @@ func BenchmarkTopN(b *testing.B) {
 			b.Run(fmt.Sprintf("%s/u=%d/k=%d", impl.nombre, c.u, c.k), func(b *testing.B) {
 				b.ReportAllocs()
 				for i := 0; i < b.N; i++ {
-					_ = impl.fn(m, c.k)
+					_ = impl.fn(agregado.Mapa[int](m), c.k)
 				}
 			})
 		}

@@ -51,7 +51,9 @@ func TestGuardarYCargar(t *testing.T) {
 	if cargado == nil {
 		t.Fatalf("esperaba hit, miss por: %s", motivo)
 	}
-	if !reflect.DeepEqual(orig, cargado) {
+	// Igual y no reflect.DeepEqual: el orden interno de un Contador depende
+	// del orden en que gob recorre el mapa al decodificar, que es aleatorio.
+	if !orig.Igual(cargado) {
 		t.Fatalf("agregados distintos:\n orig=%+v\n cargado=%+v", orig, cargado)
 	}
 }

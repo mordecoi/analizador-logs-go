@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"parcial1/internal/agregado"
-	"parcial1/internal/bench"
 	"parcial1/internal/loggen"
 	"parcial1/internal/parse"
 )
@@ -33,11 +32,11 @@ func TestContadores(t *testing.T) {
 	if c.Total != 3 {
 		t.Fatalf("Total: %d", c.Total)
 	}
-	if c.Endpoints["/a"] != 2 || c.Endpoints["/b"] != 1 {
-		t.Errorf("Endpoints: %v", c.Endpoints)
+	if c.Endpoints.Valor("/a") != 2 || c.Endpoints.Valor("/b") != 1 {
+		t.Errorf("Endpoints: %v", c.Endpoints.Mapa())
 	}
-	if c.IPs["1.1.1.1"] != 2 {
-		t.Errorf("IPs: %v", c.IPs)
+	if c.IPs.Valor("1.1.1.1") != 2 {
+		t.Errorf("IPs: %v", c.IPs.Mapa())
 	}
 	if c.Estados[200] != 2 || c.Estados[404] != 1 {
 		t.Errorf("Estados: %v", c.Estados)
@@ -56,7 +55,7 @@ var metodos = []struct {
 }
 
 func TestTopNOrdenYDesempate(t *testing.T) {
-	m := map[string]int{"a": 5, "b": 5, "c": 9, "d": 1}
+	m := agregado.Mapa[string]{"a": 5, "b": 5, "c": 9, "d": 1}
 	for _, met := range metodos {
 		t.Run(met.nombre, func(t *testing.T) {
 			top := agregado.TopN(m, 3, met.m)
@@ -73,7 +72,7 @@ func TestTopNOrdenYDesempate(t *testing.T) {
 
 func TestTopNPideMasQueLoQueHay(t *testing.T) {
 	for _, met := range metodos {
-		top := agregado.TopN(map[string]int{"x": 1}, 10, met.m)
+		top := agregado.TopN(agregado.Mapa[string]{"x": 1}, 10, met.m)
 		if len(top) != 1 {
 			t.Errorf("%s: len %d", met.nombre, len(top))
 		}
@@ -83,7 +82,7 @@ func TestTopNPideMasQueLoQueHay(t *testing.T) {
 // TestSortHeapEquivalentes: las dos estrategias tienen que devolver exactamente
 // el mismo slice, incluso con muchos empates (donde importa el desempate).
 func TestSortHeapEquivalentes(t *testing.T) {
-	r := bench.NuevoRand()
+	r := rand.New(rand.NewPCG(1, 2)) // semilla fija: corridas reproducibles
 	casos := []map[int]int{
 		aleatorio(r, 50, 1000),    // conteos dispersos, pocas claves
 		aleatorio(r, 100_000, 40), // muchas claves, pocos valores → muchos empates
@@ -91,8 +90,8 @@ func TestSortHeapEquivalentes(t *testing.T) {
 	}
 	for ci, m := range casos {
 		for _, k := range []int{1, 10, 100, 1_000_000} {
-			s := agregado.TopNSort(m, k)
-			h := agregado.TopNHeap(m, k)
+			s := agregado.TopNSort(agregado.Mapa[int](m), k)
+			h := agregado.TopNHeap(agregado.Mapa[int](m), k)
 			if !reflect.DeepEqual(s, h) {
 				t.Errorf("caso %d k=%d: sort y heap difieren\n sort=%v\n heap=%v", ci, k, s, h)
 			}
@@ -153,7 +152,7 @@ func TestContraGroundTruth(t *testing.T) {
 		}
 	}
 
-	topEstados := agregado.TopN(c.Estados, len(ver.TopEstados), agregado.MetodoHeap)
+	topEstados := agregado.TopN(agregado.Mapa[int](c.Estados), len(ver.TopEstados), agregado.MetodoHeap)
 	for i, g := range ver.TopEstados {
 		if strconv.Itoa(topEstados[i].Clave) != g.Clave || topEstados[i].Conteo != g.Conteo {
 			t.Errorf("estado %d: %d=%d vs %s=%d", i,

@@ -1,0 +1,17 @@
+# Backend de APM para las trazas OpenTelemetry del analizador.
+#
+#   docker compose up -d
+#   go run ./cmd/analizador --otlp localhost:4318 analizar -a logfiles.log
+#   → abrir http://localhost:16686 y elegir el servicio "analizador-logs"
+#
+# Jaeger recibe OTLP directamente. Como el analizador solo habla OTLP, el mismo
+# binario puede mandar las trazas a New Relic, Elastic APM, Grafana Tempo o
+# Datadog cambiando el endpoint (y agregando la credencial que pida cada uno).
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # interfaz web
+      - "4318:4318"   # OTLP sobre HTTP

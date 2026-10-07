@@ -1,0 +1,48 @@
+goos: windows
+goarch: amd64
+pkg: parcial1/internal/pipeline
+cpu: AMD Ryzen 7 7730U with Radeon Graphics         
+BenchmarkLectura/readstring-16         	       5	 215775900 ns/op	 178.40 MB/s	52672251 B/op	  280869 allocs/op
+BenchmarkLectura/readstring-16         	       5	 215975340 ns/op	 178.23 MB/s	52665740 B/op	  280859 allocs/op
+BenchmarkLectura/readstring-16         	       4	 270967575 ns/op	 142.06 MB/s	52667190 B/op	  280861 allocs/op
+BenchmarkLectura/readstring-16         	       4	 273367200 ns/op	 140.81 MB/s	52667360 B/op	  280862 allocs/op
+BenchmarkLectura/readstring-16         	       4	 261561625 ns/op	 147.17 MB/s	52665966 B/op	  280859 allocs/op
+BenchmarkLectura/readstring-16         	       4	 269810875 ns/op	 142.67 MB/s	52666628 B/op	  280860 allocs/op
+BenchmarkLectura/lotes-16              	       5	 213533400 ns/op	 180.27 MB/s	12555017 B/op	   80836 allocs/op
+BenchmarkLectura/lotes-16              	       5	 205074920 ns/op	 187.70 MB/s	12554998 B/op	   80836 allocs/op
+BenchmarkLectura/lotes-16              	       5	 201845060 ns/op	 190.71 MB/s	12555980 B/op	   80838 allocs/op
+BenchmarkLectura/lotes-16              	       5	 206159800 ns/op	 186.72 MB/s	12556000 B/op	   80838 allocs/op
+BenchmarkLectura/lotes-16              	       6	 179057917 ns/op	 214.98 MB/s	12555382 B/op	   80837 allocs/op
+BenchmarkLectura/lotes-16              	       6	 199695083 ns/op	 192.76 MB/s	12555406 B/op	   80837 allocs/op
+BenchmarkTamLote/512B-16               	       2	 599099400 ns/op	  64.25 MB/s	    2852 B/op	      15 allocs/op
+BenchmarkTamLote/512B-16               	       2	 566154100 ns/op	  67.99 MB/s	    2828 B/op	      15 allocs/op
+BenchmarkTamLote/512B-16               	       2	 596293450 ns/op	  64.55 MB/s	    2964 B/op	      17 allocs/op
+BenchmarkTamLote/512B-16               	       2	 568497250 ns/op	  67.71 MB/s	    2900 B/op	      16 allocs/op
+BenchmarkTamLote/512B-16               	       2	 570680450 ns/op	  67.45 MB/s	    2852 B/op	      15 allocs/op
+BenchmarkTamLote/512B-16               	       2	 555602900 ns/op	  69.28 MB/s	    2764 B/op	      14 allocs/op
+BenchmarkTamLote/4KiB-16               	      13	  91900400 ns/op	 418.86 MB/s	    5210 B/op	      11 allocs/op
+BenchmarkTamLote/4KiB-16               	      14	  90480536 ns/op	 425.43 MB/s	    5198 B/op	      11 allocs/op
+BenchmarkTamLote/4KiB-16               	      14	  88734471 ns/op	 433.81 MB/s	    5198 B/op	      11 allocs/op
+BenchmarkTamLote/4KiB-16               	      12	  89408092 ns/op	 430.54 MB/s	    5236 B/op	      11 allocs/op
+BenchmarkTamLote/4KiB-16               	      14	  86648686 ns/op	 444.25 MB/s	    5214 B/op	      11 allocs/op
+BenchmarkTamLote/4KiB-16               	      14	  93551014 ns/op	 411.47 MB/s	    5198 B/op	      11 allocs/op
+BenchmarkTamLote/64KiB-16              	      39	  27970315 ns/op	1376.23 MB/s	   66507 B/op	      11 allocs/op
+BenchmarkTamLote/64KiB-16              	      39	  27795621 ns/op	1384.88 MB/s	   66511 B/op	      11 allocs/op
+BenchmarkTamLote/64KiB-16              	      48	  27905819 ns/op	1379.41 MB/s	   66495 B/op	      11 allocs/op
+BenchmarkTamLote/64KiB-16              	      42	  28447738 ns/op	1353.13 MB/s	   66500 B/op	      11 allocs/op
+BenchmarkTamLote/64KiB-16              	      38	  27729542 ns/op	1388.18 MB/s	   66508 B/op	      11 allocs/op
+BenchmarkTamLote/64KiB-16              	      44	  27192393 ns/op	1415.60 MB/s	   66498 B/op	      11 allocs/op
+BenchmarkTamLote/1024KiB-16            	      48	  23565275 ns/op	1633.48 MB/s	 1050279 B/op	      12 allocs/op
+BenchmarkTamLote/1024KiB-16            	      51	  24205043 ns/op	1590.31 MB/s	 1050283 B/op	      12 allocs/op
+BenchmarkTamLote/1024KiB-16            	      49	  24314173 ns/op	1583.17 MB/s	 1050327 B/op	      12 allocs/op
+BenchmarkTamLote/1024KiB-16            	      44	  24360743 ns/op	1580.14 MB/s	 1050302 B/op	      12 allocs/op
+BenchmarkTamLote/1024KiB-16            	      43	  25159933 ns/op	1529.95 MB/s	 1050322 B/op	      12 allocs/op
+BenchmarkTamLote/1024KiB-16            	      64	  16903481 ns/op	2277.25 MB/s	 1050294 B/op	      12 allocs/op
+BenchmarkTamLote/8192KiB-16            	      72	  21142715 ns/op	1820.65 MB/s	 8390688 B/op	      12 allocs/op
+BenchmarkTamLote/8192KiB-16            	      61	  19281433 ns/op	1996.40 MB/s	 8390708 B/op	      12 allocs/op
+BenchmarkTamLote/8192KiB-16            	      62	  25628685 ns/op	1501.97 MB/s	 8390693 B/op	      12 allocs/op
+BenchmarkTamLote/8192KiB-16            	      39	  29930749 ns/op	1286.09 MB/s	 8390730 B/op	      12 allocs/op
+BenchmarkTamLote/8192KiB-16            	      37	  31909449 ns/op	1206.34 MB/s	 8390745 B/op	      13 allocs/op
+BenchmarkTamLote/8192KiB-16            	      39	  30086008 ns/op	1279.45 MB/s	 8390721 B/op	      12 allocs/op
+PASS
+ok  	parcial1/internal/pipeline	50.956s

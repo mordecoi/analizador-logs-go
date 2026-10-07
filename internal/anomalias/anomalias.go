@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"parcial1/internal/parse"
@@ -47,7 +48,7 @@ type Config struct {
 	PisoPico   int     // mínimo absoluto de 5xx para considerar una franja
 }
 
-// ConfigPorDefecto: calibrada con margen contra el tráfico normal medido
+// ConfigPorDefecto devuelve los umbrales calibrados con margen contra el tráfico normal medido
 // (la IP más activa ronda 15 solicitudes/min en hora pico y junta ~5 rutas
 // distintas con 404 por ventana de 10 min). El umbral de ráfaga además queda
 // por encima del ritmo de un escáner (~66/min), para que cada ataque lo
@@ -65,6 +66,7 @@ func ConfigPorDefecto() Config {
 
 // ventanaIP es la ventana deslizante de timestamps de una IP.
 type ventanaIP struct {
+	ip       string  // copia propia de la IP (la del evento es una vista temporal)
 	ts       []int64 // cola FIFO de timestamps (unix) dentro de la ventana
 	enCurso  bool
 	desde    int64
@@ -75,6 +77,7 @@ type ventanaIP struct {
 
 // ventana404 es la ventana deslizante de rutas con 404 de una IP.
 type ventana404 struct {
+	ip       string // copia propia de la IP
 	eventos  []evento404
 	enVent   map[string]int // ruta → apariciones dentro de la ventana
 	enCurso  bool
@@ -101,17 +104,34 @@ type Detector struct {
 	rafagas   map[string]*ventanaIP
 	escaneos  map[string]*ventana404
 	franjas   map[int64]*franja // hora unix (truncada) → 5xx
+	rutas     map[string]string // internado de rutas: vista → copia propia
 	hallazgos []Hallazgo
 	zona      *time.Location // para reportar los picos en la zona del log
 }
 
+// NuevoDetector devuelve un detector vacío con los umbrales de cfg.
 func NuevoDetector(cfg Config) *Detector {
 	return &Detector{
 		cfg:      cfg,
 		rafagas:  make(map[string]*ventanaIP),
 		escaneos: make(map[string]*ventana404),
 		franjas:  make(map[int64]*franja),
+		rutas:    make(map[string]string),
 	}
+}
+
+// ruta devuelve una copia propia de r, compartida por todas sus apariciones.
+// Las entradas que llegan a Procesar pueden ser vistas sobre el buffer del
+// lector (que se reutiliza), así que nada de ellas se guarda sin copiar. Hay
+// pocas rutas distintas, así que internarlas cuesta una búsqueda por evento y
+// una copia por ruta, en vez de una copia por evento.
+func (d *Detector) ruta(r string) string {
+	if propia, ok := d.rutas[r]; ok {
+		return propia
+	}
+	propia := strings.Clone(r)
+	d.rutas[propia] = propia
+	return propia
 }
 
 // Procesar incorpora una entrada (deben llegar en orden cronológico).
@@ -122,18 +142,18 @@ func (d *Detector) Procesar(e parse.Entrada) {
 	t := e.Fecha.Unix()
 	d.procesarRafaga(e.IP, t)
 	if e.Estado >= 500 {
-		d.procesarPico(e.Ruta, t)
+		d.procesarPico(d.ruta(e.Ruta), t)
 	}
 	if e.Estado == 404 {
-		d.procesarEscaneo(e.IP, e.Ruta, t)
+		d.procesarEscaneo(e.IP, d.ruta(e.Ruta), t)
 	}
 }
 
 func (d *Detector) procesarRafaga(ip string, t int64) {
 	v := d.rafagas[ip]
 	if v == nil {
-		v = &ventanaIP{}
-		d.rafagas[ip] = v
+		v = &ventanaIP{ip: strings.Clone(ip)}
+		d.rafagas[v.ip] = v
 	}
 	corte := t - int64(d.cfg.VentanaRafaga.Seconds())
 	for len(v.ts) > 0 && v.ts[0] <= corte {
@@ -156,14 +176,14 @@ func (d *Detector) procesarRafaga(ip string, t int64) {
 			v.maximo = len(v.ts)
 		}
 	case v.enCurso:
-		d.cerrarRafaga(ip, v)
+		d.cerrarRafaga(v)
 	}
 }
 
-func (d *Detector) cerrarRafaga(ip string, v *ventanaIP) {
+func (d *Detector) cerrarRafaga(v *ventanaIP) {
 	d.hallazgos = append(d.hallazgos, Hallazgo{
-		Tipo: "rafaga", IP: ip,
-		Desde: time.Unix(v.desde, 0).In(d.zonaODefault()), Hasta: time.Unix(v.hasta, 0).In(d.zonaODefault()),
+		Tipo: "rafaga", IP: v.ip,
+		Desde: d.instante(v.desde), Hasta: d.instante(v.hasta),
 		Cantidad: v.cantidad,
 		Detalle: fmt.Sprintf("%d solicitudes; hasta %d dentro de una ventana de %s",
 			v.cantidad, v.maximo, d.cfg.VentanaRafaga),
@@ -174,8 +194,8 @@ func (d *Detector) cerrarRafaga(ip string, v *ventanaIP) {
 func (d *Detector) procesarEscaneo(ip, ruta string, t int64) {
 	v := d.escaneos[ip]
 	if v == nil {
-		v = &ventana404{enVent: make(map[string]int)}
-		d.escaneos[ip] = v
+		v = &ventana404{ip: strings.Clone(ip), enVent: make(map[string]int)}
+		d.escaneos[v.ip] = v
 	}
 	corte := t - int64(d.cfg.VentanaEscaneo.Seconds())
 	for len(v.eventos) > 0 && v.eventos[0].t <= corte {
@@ -203,14 +223,14 @@ func (d *Detector) procesarEscaneo(ip, ruta string, t int64) {
 		v.rutasEp[ruta] = struct{}{}
 		v.cantidad++
 	case v.enCurso:
-		d.cerrarEscaneo(ip, v)
+		d.cerrarEscaneo(v)
 	}
 }
 
-func (d *Detector) cerrarEscaneo(ip string, v *ventana404) {
+func (d *Detector) cerrarEscaneo(v *ventana404) {
 	d.hallazgos = append(d.hallazgos, Hallazgo{
-		Tipo: "escaneo", IP: ip,
-		Desde: time.Unix(v.desde, 0).In(d.zonaODefault()), Hasta: time.Unix(v.hasta, 0).In(d.zonaODefault()),
+		Tipo: "escaneo", IP: v.ip,
+		Desde: d.instante(v.desde), Hasta: d.instante(v.hasta),
 		Cantidad: v.cantidad,
 		Detalle: fmt.Sprintf("%d respuestas 404 sobre %d rutas distintas en la ventana",
 			v.cantidad, len(v.rutasEp)),
@@ -232,14 +252,14 @@ func (d *Detector) procesarPico(ruta string, t int64) {
 // Hallazgos cierra los episodios abiertos, analiza las franjas de 5xx y
 // devuelve todo ordenado cronológicamente.
 func (d *Detector) Hallazgos() []Hallazgo {
-	for ip, v := range d.rafagas {
+	for _, v := range d.rafagas {
 		if v.enCurso {
-			d.cerrarRafaga(ip, v)
+			d.cerrarRafaga(v)
 		}
 	}
-	for ip, v := range d.escaneos {
+	for _, v := range d.escaneos {
 		if v.enCurso {
-			d.cerrarEscaneo(ip, v)
+			d.cerrarEscaneo(v)
 		}
 	}
 	d.analizarPicos()
@@ -282,8 +302,8 @@ func (d *Detector) analizarPicos() {
 		}
 		d.hallazgos = append(d.hallazgos, Hallazgo{
 			Tipo: "pico_5xx", Endpoint: ruta,
-			Desde:    time.Unix(hora, 0).In(d.zonaODefault()),
-			Hasta:    time.Unix(hora+3600, 0).In(d.zonaODefault()),
+			Desde:    d.instante(hora),
+			Hasta:    d.instante(hora + 3600),
 			Cantidad: f.total,
 			Detalle: fmt.Sprintf("%d respuestas 5xx en la franja (típico %.0f ± %.0f); %d en %s",
 				f.total, media, desvio, maxi, ruta),
@@ -291,9 +311,11 @@ func (d *Detector) analizarPicos() {
 	}
 }
 
-func (d *Detector) zonaODefault() *time.Location {
-	if d.zona != nil {
-		return d.zona
+// instante convierte segundos unix a un time.Time en la zona del log.
+func (d *Detector) instante(unix int64) time.Time {
+	zona := d.zona
+	if zona == nil {
+		zona = time.UTC
 	}
-	return time.UTC
+	return time.Unix(unix, 0).In(zona)
 }

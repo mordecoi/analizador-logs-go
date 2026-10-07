@@ -1,0 +1,160 @@
+internal\agregado\topn_heap.go:11:6: identifier "montículoMin" contain non-ASCII character: U+00ED 'í' (asciicheck)
+type montículoMin[K cmp.Ordered] []Par[K]
+     ^
+cmd\analizar\main.go:51: 51-63 lines are duplicate of `cmd\analizar\main.go:64-76` (dupl)
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer pprof.StopCPUProfile()
+	}
+cmd\analizar\main.go:64: 64-76 lines are duplicate of `cmd\analizar\main.go:51-63` (dupl)
+	if *traza != "" {
+		f, err := os.Create(*traza)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		if err := trace.Start(f); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer trace.Stop()
+	}
+cmd\analizar\main.go:34:1: cognitive complexity 39 of func `main` is high (> 20) (gocognit)
+func main() {
+^
+internal\loggen\loggen.go:351:1: cognitive complexity 38 of func `Generar` is high (> 20) (gocognit)
+func Generar(w io.Writer, opts Opciones) (Verificacion, error) {
+^
+internal\loggen\loggen.go:94:13: string `pagina` has 10 occurrences, make it a constant (goconst)
+	{"/", 120, "pagina"},
+	           ^
+internal\loggen\loggen.go:98:20: string `admin` has 6 occurrences, make it a constant (goconst)
+	{"/usr/admin", 8, "admin"},
+	                  ^
+internal\loggen\loggen.go:103:24: string `api` has 13 occurrences, make it a constant (goconst)
+	{"/api/products", 70, "api"},
+	                      ^
+internal\loggen\loggen.go:112:31: string `estatico` has 11 occurrences, make it a constant (goconst)
+	{"/static/css/main.css", 60, "estatico"},
+	                             ^
+internal\loggen\loggen.go:119:18: string `salud` has 5 occurrences, make it a constant (goconst)
+	{"/health", 70, "salud"},
+	                ^
+internal\loggen\loggen.go:257:10: string `GET` has 3 occurrences, make it a constant (goconst)
+		return "GET"
+		       ^
+internal\loggen\loggen.go:263:10: string `POST` has 3 occurrences, make it a constant (goconst)
+		return "POST"
+		       ^
+internal\loggen\loggen.go:275:9: string `HTTP/1.1` has 4 occurrences, make it a constant (goconst)
+	return "HTTP/1.1"
+	       ^
+internal\parse\manual.go:76:1: cyclomatic complexity 19 of func `ParsearManual` is high (> 15) (gocyclo)
+func ParsearManual(linea string) (Entrada, error) {
+^
+internal\parse\parse_test.go:96:1: cyclomatic complexity 19 of func `TestManualIgualQueRegex` is high (> 15) (gocyclo)
+func TestManualIgualQueRegex(t *testing.T) {
+^
+internal\bench\bench.go:18:1: Comment should end in a period (godot)
+// MascaraObjetivos se usa como: objetivos[i & bench.MascaraObjetivos]
+^
+cmd\analizar\main.go:227:2: G104: Errors unhandled (gosec)
+	tw.Flush()
+	^
+cmd\analizar\main.go:257:2: G104: Errors unhandled (gosec)
+	twv.Flush()
+	^
+cmd\analizar\main.go:327:2: G104: Errors unhandled (gosec)
+	tw.Flush()
+	^
+cmd\analizar\main.go:340:2: G104: Errors unhandled (gosec)
+	twh.Flush()
+	^
+cmd\analizar\main.go:359:2: G104: Errors unhandled (gosec)
+	tw.Flush()
+	^
+cmd\analizar\main.go:397:2: G104: Errors unhandled (gosec)
+	tw.Flush()
+	^
+cmd\analizar\main.go:438:13: G301: Expect directory permissions to be 0750 or less (gosec)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+		          ^
+cmd\analizar\main.go:446:12: G302: Expect file permissions to be 0600 or less (gosec)
+	f, err := os.OpenFile(ruta, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	          ^
+cmd\generar\main.go:98:2: G104: Errors unhandled (gosec)
+	tw.Flush()
+	^
+internal\cache\cache_test.go:96:2: G104: Errors unhandled (gosec)
+	f.Close()
+	^
+internal\loggen\loggen_test.go:84:6: Consider preallocating conteos with capacity len(cont) (prealloc)
+	var conteos []int
+	    ^
+cmd\analizar\main.go:470:15: redefines-builtin-id: redefinition of the built-in function max (revive)
+func barra(v, max, ancho int) string {
+              ^
+internal\agregado\agregado.go:24:1: exported: exported function NuevoContadores should have comment or be unexported (revive)
+func NuevoContadores() *Contadores {
+^
+internal\agregado\agregado.go:111:2: exported: exported const MetodoSort should have comment (or a comment on this block) or be unexported (revive)
+	MetodoSort Metodo = iota // ordenar todo el mapa: O(u log u)
+	^
+internal\anomalias\anomalias.go:50:1: exported: comment on exported function ConfigPorDefecto should be of the form "ConfigPorDefecto ..." (revive)
+// ConfigPorDefecto: calibrada con margen contra el tráfico normal medido
+^
+internal\anomalias\anomalias.go:108:1: exported: exported function NuevoDetector should have comment or be unexported (revive)
+func NuevoDetector(cfg Config) *Detector {
+^
+internal\cache\cache.go:110:1: exported: exported function NuevasConsultas should have comment or be unexported (revive)
+func NuevasConsultas(c *agregado.Contadores, met agregado.Metodo) *Consultas {
+^
+internal\cache\cache.go:148:1: exported: exported method Consultas.Endpoints should have comment or be unexported (revive)
+func (q *Consultas) Endpoints(n int) []agregado.Par[string] {
+^
+internal\cache\cache.go:152:1: exported: exported method Consultas.IPs should have comment or be unexported (revive)
+func (q *Consultas) IPs(n int) []agregado.Par[string] {
+^
+internal\cache\cache.go:156:1: exported: exported method Consultas.Usuarios should have comment or be unexported (revive)
+func (q *Consultas) Usuarios(n int) []agregado.Par[string] {
+^
+internal\cache\cache.go:160:1: exported: exported method Consultas.Estados should have comment or be unexported (revive)
+func (q *Consultas) Estados(n int) []agregado.Par[int] {
+^
+internal\parse\manual.go:22:6: redefines-builtin-id: redefinition of the built-in function min (revive)
+	for min := -12 * 60; min <= 14*60; min += 15 {
+	    ^
+internal\parse\manual.go:190:2: redefines-builtin-id: redefinition of the built-in function min (revive)
+	min := hh*60 + mm
+	^
+internal\parse\manual.go:192:3: redefines-builtin-id: redefinition of the built-in function min (revive)
+		min = -min
+		^
+internal\parse\manual.go:170:5: QF1001: could apply De Morgan's law (staticcheck)
+	if !(ok1 && ok2 && ok3 && ok4 && ok5 && ok6) {
+	   ^
+internal\loggen\loggen_test.go:14:73: campos - result estado is never used (unparam)
+func campos(t *testing.T, linea string) (ip string, ts time.Time, ruta, estado string) {
+                                                                        ^
+42 issues:
+* asciicheck: 1
+* dupl: 2
+* gocognit: 2
+* goconst: 8
+* gocyclo: 2
+* godot: 1
+* gosec: 10
+* prealloc: 1
+* revive: 13
+* staticcheck: 1
+* unparam: 1
