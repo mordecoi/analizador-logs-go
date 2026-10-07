@@ -3,6 +3,7 @@ package cli
 import (
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -113,7 +114,7 @@ func (o opcionesAnalisis) validar() error {
 		return err
 	}
 	if o.archivo == "-" && (o.cache || o.anomalias) {
-		return fmt.Errorf("--cache y --anomalias necesitan releer la entrada: no se pueden usar con stdin")
+		return errors.New("--cache y --anomalias necesitan releer la entrada: no se pueden usar con stdin")
 	}
 	return nil
 }

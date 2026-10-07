@@ -69,6 +69,7 @@ linters:
         - G404 # math/rand en el generador sintético: no es criptografía
         - G115 # conversiones int↔int64 sobre tamaños de archivo acotados
         - G306 # permisos 0644 en archivos de salida: son reportes, no secretos
+        - G104 # errores no chequeados: lo cubre errcheck, con el preset de abajo
 
   exclusions:
     # fmt.Fprintf a stdout, Close de archivos de solo lectura, etc.
@@ -78,7 +79,7 @@ linters:
     rules:
       # los tests y benchmarks pueden ser largos y repetitivos por diseño
       - path: _test\.go
-        linters: [funlen, dupl, gocognit, goconst, errcheck]
+        linters: [funlen, dupl, gocognit, gocyclo, goconst, errcheck]
 
 formatters:
   enable:

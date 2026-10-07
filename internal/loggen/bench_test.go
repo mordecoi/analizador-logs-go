@@ -19,7 +19,7 @@ const lineasBench = 50_000
 //
 //	go test ./internal/loggen -run '^$' -bench EscrituraBuffer -benchmem
 func BenchmarkEscrituraBuffer(b *testing.B) {
-	tamaños := []struct {
+	casos := []struct {
 		nombre string
 		tam    int
 	}{
@@ -29,7 +29,7 @@ func BenchmarkEscrituraBuffer(b *testing.B) {
 		{"1MiB", 1 << 20},
 		{"8MiB", 8 << 20},
 	}
-	for _, t := range tamaños {
+	for _, t := range casos {
 		b.Run(t.nombre, func(b *testing.B) {
 			ruta := filepath.Join(b.TempDir(), "bench.log")
 			for b.Loop() {

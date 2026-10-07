@@ -133,3 +133,36 @@ func TestConsultasHitsMissesEInvalidacion(t *testing.T) {
 		t.Fatalf("el recálculo no ve los datos nuevos: %v", tras)
 	}
 }
+
+func TestTodasLasConsultas(t *testing.T) {
+	q := cache.NuevasConsultas(contadoresDePrueba(), agregado.MetodoSort)
+	if ips := q.IPs(1); len(ips) != 1 || ips[0].Clave != "1.1.1.1" || ips[0].Conteo != 2 {
+		t.Errorf("IPs: %v", ips)
+	}
+	if est := q.Estados(5); len(est) != 2 || est[0].Clave != "200" {
+		t.Errorf("Estados (la clave numérica se devuelve como texto): %v", est)
+	}
+	if us := q.Usuarios(5); len(us) != 1 || us[0].Conteo != 3 { // entrada() deja el usuario vacío
+		t.Errorf("Usuarios: %v", us)
+	}
+	q.IPs(1)
+	if q.Hits != 1 || q.Misses != 3 {
+		t.Errorf("hits %d misses %d", q.Hits, q.Misses)
+	}
+}
+
+func TestCargarCacheCorrupto(t *testing.T) {
+	ruta := logDePrueba(t)
+	if err := os.WriteFile(cache.RutaCache(ruta), []byte("no es gob"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if c, motivo := cache.Cargar(ruta); c != nil || motivo != "cache corrupto" {
+		t.Fatalf("esperaba miss por cache corrupto, obtuve %v %q", c, motivo)
+	}
+	if c, motivo := cache.Cargar(filepath.Join(t.TempDir(), "no-existe.log")); c != nil || motivo == "" {
+		t.Fatalf("log inexistente: %v %q", c, motivo)
+	}
+	if err := cache.Guardar(filepath.Join(t.TempDir(), "no-existe.log"), contadoresDePrueba()); err == nil {
+		t.Fatal("Guardar sobre un log inexistente tiene que fallar")
+	}
+}

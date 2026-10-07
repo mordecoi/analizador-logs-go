@@ -74,8 +74,12 @@ func (l *lectorLotes) siguiente() ([]byte, error) {
 // el buffer del lote, que se reutiliza: es válido solo mientras el lote lo sea.
 // Por eso el contrato de Parser y de los callbacks: quien retiene un campo de
 // una Entrada más allá de la llamada debe clonarlo (strings.Clone).
+//
+// Auditado (gosec G103): el único consumidor que retiene strings más allá del
+// callback (anomalias.Detector) los clona; agregado.Contador clona al
+// insertar. TestAnomaliasSobreLotes verifica el contrato.
 func vista(b []byte) string {
-	return unsafe.String(unsafe.SliceData(b), len(b))
+	return unsafe.String(unsafe.SliceData(b), len(b)) //nolint:gosec // G103 auditado, ver arriba
 }
 
 // procesarLote parsea las líneas de un lote cuyo primer byte cae antes de

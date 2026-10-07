@@ -1,0 +1,11 @@
+ parcial1/cmd/analizar coverage: 0.0% of statements
+ parcial1/cmd/generar coverage: 0.0% of statements
+ parcial1/cmd/grafico coverage: 0.0% of statements
+ok parcial1/internal/agregado 2.253s coverage: 80.9% of statements
+ok parcial1/internal/anomalias 3.023s coverage: 95.9% of statements
+ parcial1/internal/bench coverage: 0.0% of statements
+ok parcial1/internal/cache 1.255s coverage: 69.6% of statements
+ok parcial1/internal/loggen 3.234s coverage: 96.3% of statements
+ok parcial1/internal/parse 1.486s coverage: 82.1% of statements
+ok parcial1/internal/pipeline 1.713s coverage: 85.4% of statements
+total:						(statements)		51.0%

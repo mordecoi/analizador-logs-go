@@ -49,21 +49,6 @@ func (c *Contadores) Agregar(e parse.Entrada) {
 	c.PorHora[e.Fecha.Hour()]++
 }
 
-// Fusionar suma los contadores de otro (la fase "reduce" del map-reduce).
-// Costo O(Σ claves de o).
-func (c *Contadores) Fusionar(o *Contadores) {
-	c.Total += o.Total
-	for k, v := range o.Estados {
-		c.Estados[k] += v
-	}
-	c.Endpoints.Fusionar(o.Endpoints)
-	c.IPs.Fusionar(o.IPs)
-	c.Usuarios.Fusionar(o.Usuarios)
-	for h, v := range o.PorHora {
-		c.PorHora[h] += v
-	}
-}
-
 // FusionarParalelo suma todos los parciales en unos Contadores nuevos (la fase
 // reduce del map-reduce), fusionando cada contador de claves string con p
 // goroutines (ver FusionarClaves). Lo demás es de tamaño fijo y

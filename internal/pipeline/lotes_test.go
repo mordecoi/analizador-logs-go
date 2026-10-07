@@ -93,15 +93,15 @@ func TestBloquesConLotesChicos(t *testing.T) {
 	tam, _ := tamanoDe(ruta)
 	for _, workers := range []int{1, 3, 8} {
 		for _, tamLote := range []int{50, 333, 4096} {
-			total := agregado.NuevoContadores()
 			limites := limitesDeBloques(tam, workers)
+			parciales := make([]*agregado.Contadores, workers)
 			for w := range workers {
-				parcial := agregado.NuevoContadores()
-				if _, err := procesarBloque(ctx, ruta, limites[w], limites[w+1], parse.ParsearManual, parcial.Agregar, tamLote); err != nil {
+				parciales[w] = agregado.NuevoContadores()
+				if _, err := procesarBloque(ctx, ruta, limites[w], limites[w+1], parse.ParsearManual, parciales[w].Agregar, tamLote); err != nil {
 					t.Fatal(err)
 				}
-				total.Fusionar(parcial)
 			}
+			total := agregado.FusionarParalelo(parciales, workers)
 			if !ref.Igual(total) {
 				t.Fatalf("workers=%d lote=%d: total %d vs %d", workers, tamLote, total.Total, ref.Total)
 			}

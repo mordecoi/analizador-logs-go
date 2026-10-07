@@ -40,7 +40,9 @@ func Leer(ruta string) (Series, error) {
 	}
 	defer f.Close()
 
-	filas, err := csv.NewReader(f).ReadAll()
+	r := csv.NewReader(f)
+	r.FieldsPerRecord = -1 // filas de largo variable: las incompletas se saltean abajo
+	filas, err := r.ReadAll()
 	if err != nil {
 		return Series{}, err
 	}

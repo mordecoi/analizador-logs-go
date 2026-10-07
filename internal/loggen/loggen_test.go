@@ -10,8 +10,8 @@ import (
 )
 
 // campos extrae de una línea de log Apache Combined lo mínimo para los tests:
-// IP, timestamp, ruta y status.
-func campos(t *testing.T, linea string) (ip string, ts time.Time, ruta, estado string) {
+// IP, timestamp y ruta.
+func campos(t *testing.T, linea string) (ip string, ts time.Time, ruta string) {
 	t.Helper()
 	ip = linea[:strings.IndexByte(linea, ' ')]
 
@@ -27,9 +27,6 @@ func campos(t *testing.T, linea string) (ip string, ts time.Time, ruta, estado s
 	q2 := strings.IndexByte(linea[q1+1:], '"') + q1 + 1
 	if partes := strings.Fields(linea[q1+1 : q2]); len(partes) >= 2 {
 		ruta = partes[1]
-	}
-	if resto := strings.Fields(linea[q2+1:]); len(resto) >= 1 {
-		estado = resto[0]
 	}
 	return
 }
@@ -66,7 +63,7 @@ func TestOrdenCronologico(t *testing.T) {
 	lineas, _ := generar(t, loggen.Opciones{Lineas: 20_000, Semilla: 7})
 	var prev time.Time
 	for i, l := range lineas {
-		_, ts, _, _ := campos(t, l)
+		_, ts, _ := campos(t, l)
 		if ts.Before(prev) {
 			t.Fatalf("línea %d fuera de orden: %s antes de %s", i, ts, prev)
 		}
@@ -78,10 +75,10 @@ func TestDistribucionSesgada(t *testing.T) {
 	lineas, _ := generar(t, loggen.Opciones{Lineas: 60_000, Semilla: 3})
 	cont := map[string]int{}
 	for _, l := range lineas {
-		_, _, ruta, _ := campos(t, l)
+		_, _, ruta := campos(t, l)
 		cont[ruta]++
 	}
-	var conteos []int
+	conteos := make([]int, 0, len(cont))
 	var maxC int
 	for _, c := range cont {
 		conteos = append(conteos, c)
@@ -138,7 +135,7 @@ func TestAnomaliasPresentes(t *testing.T) {
 	rafagaHits := 0
 	escaneoRutas := map[string]struct{}{}
 	for _, l := range lineas {
-		ip, _, ruta, _ := campos(t, l)
+		ip, _, ruta := campos(t, l)
 		if ip == rafaga.IP {
 			rafagaHits++
 		}

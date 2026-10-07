@@ -87,14 +87,6 @@ func (c *Contador) parteDe(clave string) *parte {
 // un buffer: si es nueva se clona, y nunca se guarda tal cual.
 func (c *Contador) Incrementar(clave string) { c.parteDe(clave).sumar(clave, 1, true) }
 
-// Fusionar suma los conteos de o, secuencialmente. Las claves de o ya son
-// propias (se clonaron al insertarlas), así que se comparten sin copiarlas.
-func (c *Contador) Fusionar(o *Contador) {
-	for k, v := range o.All() {
-		c.parteDe(k).sumar(k, v, false)
-	}
-}
-
 // FusionarClaves suma varios contadores en uno nuevo usando p goroutines.
 //
 // Es la fase reduce del map-reduce hecha en paralelo: la goroutine g arma la
@@ -122,16 +114,9 @@ func FusionarClaves(contadores []*Contador, p int) *Contador {
 			destino := nuevaParte(total / p)
 			for _, c := range contadores {
 				if alineados {
-					origen := c.partes[g]
-					for k, i := range origen.indice {
-						destino.sumar(k, origen.conteos[i], false)
-					}
-					continue
-				}
-				for k, v := range c.All() {
-					if p == 1 || particionDe(k, p) == g {
-						destino.sumar(k, v, false)
-					}
+					destino.fusionar(c.partes[g])
+				} else {
+					destino.fusionarParticion(c, g, p)
 				}
 			}
 			res.partes[g] = destino
@@ -139,6 +124,22 @@ func FusionarClaves(contadores []*Contador, p int) *Contador {
 	}
 	wg.Wait()
 	return res
+}
+
+// fusionar suma todas las claves de o (de la misma partición que p).
+func (p *parte) fusionar(o *parte) {
+	for k, i := range o.indice {
+		p.sumar(k, o.conteos[i], false)
+	}
+}
+
+// fusionarParticion suma las claves de c que caen en la partición g de n.
+func (p *parte) fusionarParticion(c *Contador, g, n int) {
+	for k, v := range c.All() {
+		if n == 1 || particionDe(k, n) == g {
+			p.sumar(k, v, false)
+		}
+	}
 }
 
 // Valor devuelve el conteo de la clave (0 si no apareció).

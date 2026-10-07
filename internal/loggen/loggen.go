@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"math/rand/v2"
 	"slices"
@@ -77,7 +78,7 @@ type Verificacion struct {
 	Anomalias          []Anomalia `json:"anomalias"`
 	TopEndpoints       []Par      `json:"top_endpoints"`
 	TopEstados         []Par      `json:"top_estados"`
-	TopIPsActivas      []Par      `json:"top_ips_activas"`
+	TopIPsActivas      []Par      `json:"top_ips_activas"` // entre las IPs seguidas: pool activo + anomalías
 	SolicitudesPorHora [24]int    `json:"solicitudes_por_hora"`
 	HoraPico           int        `json:"hora_pico"`
 }
@@ -415,7 +416,13 @@ func Generar(w io.Writer, opts Opciones) (Verificacion, error) {
 
 	base := nuevaCorrienteBase(r, opts, m)
 	esc := nuevoEscritor(w, opts.TamBuffer)
-	acu := nuevoAcumulador(m.esHeavyIP)
+	// Se siguen las IPs que pueden llegar al top: el pool activo y las de las
+	// anomalías (una ráfaga de 500 solicitudes entra al top-10 en logs chicos).
+	// Las IPs aleatorias aparecen ~1 vez cada una y no hace falta contarlas.
+	seguidas := maps.Clone(m.esHeavyIP)
+	seguidas[rafagaAnom.IP] = true
+	seguidas[escaneoAnom.IP] = true
+	acu := nuevoAcumulador(seguidas)
 
 	sig := base.siguiente()
 	for escritas := 0; escritas < opts.Lineas; escritas++ {
@@ -622,26 +629,26 @@ func (e *escritor) vaciar() error {
 type acumulador struct {
 	endpoints map[string]int
 	estados   map[string]int
-	heavy     map[string]int // solo las IPs del pool activo: son las del top
-	esHeavyIP map[string]bool
+	ips       map[string]int // solo las IPs seguidas: las únicas que llegan al top
+	seguidas  map[string]bool
 	porHora   [24]int
 	ultima    time.Time
 }
 
-func nuevoAcumulador(esHeavyIP map[string]bool) *acumulador {
+func nuevoAcumulador(seguidas map[string]bool) *acumulador {
 	return &acumulador{
 		endpoints: make(map[string]int, len(endpoints)+len(rutasSondeo)),
 		estados:   make(map[string]int, 16),
-		heavy:     make(map[string]int, len(esHeavyIP)),
-		esHeavyIP: esHeavyIP,
+		ips:       make(map[string]int, len(seguidas)),
+		seguidas:  seguidas,
 	}
 }
 
 func (a *acumulador) registrar(e *evento) {
 	a.endpoints[e.ruta]++
 	a.estados[e.estado]++
-	if a.esHeavyIP[e.ip] {
-		a.heavy[e.ip]++
+	if a.seguidas[e.ip] {
+		a.ips[e.ip]++
 	}
 	a.porHora[e.t.Hour()]++
 	a.ultima = e.t
@@ -652,7 +659,7 @@ func (a *acumulador) verificacion() Verificacion {
 		Hasta:              a.ultima,
 		TopEndpoints:       agregado.TopNSort(agregado.Mapa[string](a.endpoints), 10),
 		TopEstados:         agregado.TopNSort(agregado.Mapa[string](a.estados), 10),
-		TopIPsActivas:      agregado.TopNSort(agregado.Mapa[string](a.heavy), 10),
+		TopIPsActivas:      agregado.TopNSort(agregado.Mapa[string](a.ips), 10),
 		SolicitudesPorHora: a.porHora,
 		HoraPico:           agregado.HoraPico(a.porHora),
 	}
