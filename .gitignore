@@ -15,3 +15,6 @@ ground-truth.json
 /*.pprof
 /*.prof
 /trace.out
+
+# Logs de prueba generados localmente
+/datos/

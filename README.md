@@ -41,6 +41,7 @@ hora pico y top-10 de endpoints, estados e IPs, idénticos clave por clave. Dete
 
 | Documento | Contenido |
 |---|---|
+| [`REQUERIMIENTOS.md`](REQUERIMIENTOS.md) | Requerimientos del primer y del segundo parcial, unificados |
 | [`PLAN.md`](PLAN.md) | Plan de trabajo completo: 12 fases con entregable, criterio de "hecho" y resultados de cada una |
 | [`COMPLEJIDAD.md`](COMPLEJIDAD.md) | Análisis de complejidad con derivación de cada cota (no solo la notación) |
 | [`PERFILADO.md`](PERFILADO.md) | Perfilado consolidado: las 5 preguntas del enunciado respondidas con evidencia de `pprof` |
@@ -122,5 +123,4 @@ Tres hallazgos que salieron de medir y que están documentados en detalle:
   compartido bajo mutex (`-modo conc-mutex`) usa 8 núcleos y es *más lenta* que la versión
   secuencial. El map-reduce con contadores por worker da 2,9×.
 
-El enunciado original está en
-[`Primer-Parcial-Programacion-Eficiente.md`](Primer-Parcial-Programacion-Eficiente.md).
+Los requerimientos de ambos parciales están en [`REQUERIMIENTOS.md`](REQUERIMIENTOS.md).
