@@ -25,7 +25,7 @@ import (
 )
 
 // versionCache invalida caches viejos si cambia el formato de Contadores.
-const versionCache = 2 // 2: Endpoints/IPs/Usuarios pasaron a ser *agregado.Contador
+const versionCache = 3 // 3: Contador serializado como slices paralelos
 
 // archivoCache es lo que se serializa: los agregados más los metadatos del log
 // con el que se calcularon, para poder detectar que el log cambió.

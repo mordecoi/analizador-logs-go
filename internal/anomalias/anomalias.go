@@ -4,7 +4,9 @@
 //   - Ráfaga: una IP concentra demasiadas solicitudes en una ventana corta
 //     (ventana deslizante de timestamps por IP, O(1) amortizado por evento).
 //   - Pico de 5xx: una franja horaria con errores de servidor muy por encima de
-//     lo típico (conteo por hora + umbral estadístico μ + k·σ al final).
+//     lo típico para esa hora del día (conteo por hora + umbral μ + k·σ contra
+//     las franjas de la misma hora, al final). Las franjas anómalas seguidas se
+//     unen en un episodio.
 //   - Escaneo: una IP acumula muchas rutas distintas con 404 en pocos minutos
 //     (ventana deslizante de rutas 404 por IP). Un usuario intenso legítimo
 //     también termina tocando todas las rutas, pero a lo largo de días y sin
@@ -44,8 +46,9 @@ type Config struct {
 	VentanaEscaneo time.Duration // largo de la ventana de 404s por IP
 	UmbralEscaneo  int           // rutas distintas con 404 que abren un episodio
 
-	FactorPico float64 // cuántos desvíos sobre la media marca una franja anómala
-	PisoPico   int     // mínimo absoluto de 5xx para considerar una franja
+	FactorPico  float64 // cuántos desvíos sobre la media marca una franja anómala
+	VecesTipico float64 // además, cuántas veces lo típico de su hora tiene que superar
+	PisoPico    int     // mínimo absoluto de 5xx para considerar una franja
 }
 
 // ConfigPorDefecto devuelve los umbrales calibrados con margen contra el tráfico normal medido
@@ -60,6 +63,7 @@ func ConfigPorDefecto() Config {
 		VentanaEscaneo: 10 * time.Minute,
 		UmbralEscaneo:  15,
 		FactorPico:     3,
+		VecesTipico:    2,
 		PisoPico:       50,
 	}
 }
@@ -268,47 +272,120 @@ func (d *Detector) Hallazgos() []Hallazgo {
 	return d.hallazgos
 }
 
-// analizarPicos marca las franjas cuyo total de 5xx supera μ + k·σ, calculando
-// μ y σ **sin la franja candidata** (leave-one-out). Con pocas franjas, un
-// outlier grande infla tanto el desvío global que queda por debajo de su propio
-// umbral y se esconde a sí mismo; sacándolo del cálculo, el umbral refleja lo
-// "típico" de verdad. El piso absoluto evita marcar franjas chicas cuando σ≈0.
+// estadistica acumula suma y suma de cuadrados para calcular media y desvío
+// dejando afuera un valor (leave-one-out) en O(1).
+type estadistica struct {
+	n           int
+	suma, suma2 float64
+}
+
+func (e *estadistica) agregar(x float64) {
+	e.n++
+	e.suma += x
+	e.suma2 += x * x
+}
+
+// sin devuelve media y desvío de los valores acumulados sin contar x. El
+// desvío nunca baja de √media: los conteos son de tipo Poisson, y con pocas
+// muestras (6 en un log de una semana) el desvío estimado puede salir
+// artificialmente chico y dejar el umbral demasiado cerca de la media.
+func (e estadistica) sin(x float64) (media, desvio float64) {
+	n := float64(e.n - 1)
+	media = (e.suma - x) / n
+	varianza := (e.suma2-x*x)/n - media*media
+	return media, math.Max(math.Sqrt(math.Max(0, varianza)), math.Sqrt(math.Max(0, media)))
+}
+
+// minFranjasPorHora es cuántas franjas de una misma hora del día hacen falta
+// para usarlas como referencia. Con menos (logs de un par de días) se compara
+// contra todas las franjas, como en el primer parcial.
+const minFranjasPorHora = 4
+
+// analizarPicos marca las franjas cuyo total de 5xx supera μ + k·σ.
+//
+// Dos decisiones, cada una motivada por un caso que fallaba:
+//
+//   - μ y σ se calculan **sin la franja candidata** (leave-one-out). Con pocas
+//     franjas, un outlier grande infla tanto el desvío global que queda por
+//     debajo de su propio umbral y se esconde a sí mismo.
+//   - La referencia son las franjas de **la misma hora del día** (estacionalidad):
+//     a las 3 AM lo típico son ~17 errores y a las 13 h ~190, así que un pico
+//     nocturno de 300 queda por debajo del umbral global (~360) pero es 10×
+//     lo típico de su hora. Lo mostró el log de 20 M líneas, donde el pico
+//     inyectado cruza el límite entre dos horas y cada mitad (~320) pasaba
+//     inadvertida.
+//
+// Además del umbral estadístico se exige un tamaño de efecto: la franja tiene
+// que superar VecesTipico veces la media de referencia. Con cientos de franjas
+// evaluadas a 3σ, alguna lo supera por azar (comparaciones múltiples): en un
+// log de una semana, una medianoche con 53 errores contra un típico de 35 daba
+// z ≈ 3,1, estadísticamente significativo pero irrelevante en la práctica.
+//
+// Las franjas anómalas consecutivas se informan como un solo episodio: un pico
+// que cruza una hora en punto es una anomalía, no dos. El piso absoluto evita
+// marcar franjas chicas cuando σ ≈ 0.
 func (d *Detector) analizarPicos() {
 	if len(d.franjas) < 3 {
 		return // sin suficientes franjas no hay "típico" contra el cual comparar
 	}
-	var suma, suma2 float64
-	for _, f := range d.franjas {
-		suma += float64(f.total)
-		suma2 += float64(f.total) * float64(f.total)
-	}
-	n := float64(len(d.franjas))
-
+	var global estadistica
+	var porHora [24]estadistica
 	for hora, f := range d.franjas {
-		x := float64(f.total)
-		media := (suma - x) / (n - 1)
-		varianza := (suma2-x*x)/(n-1) - media*media
-		desvio := math.Sqrt(math.Max(0, varianza))
-		umbral := media + d.cfg.FactorPico*desvio
-		if f.total < d.cfg.PisoPico || x <= umbral {
-			continue
-		}
-		// atribuir el pico a la ruta dominante de la franja
-		ruta, maxi := "", 0
-		for r, c := range f.porRuta {
-			if c > maxi || (c == maxi && r < ruta) {
-				ruta, maxi = r, c
-			}
-		}
-		d.hallazgos = append(d.hallazgos, Hallazgo{
-			Tipo: "pico_5xx", Endpoint: ruta,
-			Desde:    d.instante(hora),
-			Hasta:    d.instante(hora + 3600),
-			Cantidad: f.total,
-			Detalle: fmt.Sprintf("%d respuestas 5xx en la franja (típico %.0f ± %.0f); %d en %s",
-				f.total, media, desvio, maxi, ruta),
-		})
+		global.agregar(float64(f.total))
+		porHora[d.instante(hora).Hour()].agregar(float64(f.total))
 	}
+
+	var anomalas []int64
+	for hora, f := range d.franjas {
+		ref := porHora[d.instante(hora).Hour()]
+		if ref.n < minFranjasPorHora {
+			ref = global
+		}
+		x := float64(f.total)
+		media, desvio := ref.sin(x)
+		if f.total >= d.cfg.PisoPico && x > media+d.cfg.FactorPico*desvio && x > d.cfg.VecesTipico*media {
+			anomalas = append(anomalas, hora)
+		}
+	}
+	slices.Sort(anomalas)
+
+	for i := 0; i < len(anomalas); {
+		j := i + 1
+		for j < len(anomalas) && anomalas[j] == anomalas[j-1]+3600 {
+			j++
+		}
+		d.reportarPico(anomalas[i:j], global)
+		i = j
+	}
+}
+
+// reportarPico agrega un hallazgo por un episodio de franjas consecutivas,
+// atribuido a la ruta con más errores en el episodio.
+func (d *Detector) reportarPico(horas []int64, global estadistica) {
+	total := 0
+	porRuta := make(map[string]int)
+	for _, h := range horas {
+		f := d.franjas[h]
+		total += f.total
+		for r, c := range f.porRuta {
+			porRuta[r] += c
+		}
+	}
+	ruta, maxi := "", 0
+	for r, c := range porRuta {
+		if c > maxi || (c == maxi && r < ruta) {
+			ruta, maxi = r, c
+		}
+	}
+	media := global.suma / float64(global.n)
+	d.hallazgos = append(d.hallazgos, Hallazgo{
+		Tipo: "pico_5xx", Endpoint: ruta,
+		Desde:    d.instante(horas[0]),
+		Hasta:    d.instante(horas[len(horas)-1] + 3600),
+		Cantidad: total,
+		Detalle: fmt.Sprintf("%d respuestas 5xx en %d h (típico %.0f/h); %d en %s",
+			total, len(horas), media, maxi, ruta),
+	})
 }
 
 // instante convierte segundos unix a un time.Time en la zona del log.

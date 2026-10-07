@@ -3,9 +3,11 @@ package agregado
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"hash/maphash"
 	"iter"
 	"maps"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -178,26 +180,70 @@ func (c *Contador) Mapa() map[string]int {
 	return maps.Collect(c.All())
 }
 
-// GobEncode serializa el Contador como un map (la partición no se guarda).
+// serializado es la forma en disco de un Contador: dos slices paralelos.
+// Gob decodifica slices mucho más rápido que un map (no tiene que hashear ni
+// insertar clave por clave), y el índice se reconstruye una sola vez, ya con
+// su tamaño final. Serializar un map costaba el doble a 20 M de líneas: un map
+// que armaba gob y otro, el índice, copiado de ese.
+type serializado struct {
+	Claves  []string
+	Conteos []int
+}
+
+// GobEncode serializa el Contador (la partición no se guarda).
 func (c *Contador) GobEncode() ([]byte, error) {
+	sz := serializado{Claves: make([]string, 0, c.Len()), Conteos: make([]int, 0, c.Len())}
+	for k, v := range c.All() {
+		sz.Claves = append(sz.Claves, k)
+		sz.Conteos = append(sz.Conteos, v)
+	}
 	var buf bytes.Buffer
-	err := gob.NewEncoder(&buf).Encode(c.Mapa())
+	err := gob.NewEncoder(&buf).Encode(sz)
 	return buf.Bytes(), err
 }
 
-// GobDecode reconstruye el Contador, en una sola parte, a partir de lo que
-// escribió GobEncode.
+// GobDecode reconstruye el Contador a partir de lo que escribió GobEncode.
 func (c *Contador) GobDecode(datos []byte) error {
-	var m map[string]int
-	if err := gob.NewDecoder(bytes.NewReader(datos)).Decode(&m); err != nil {
+	var sz serializado
+	if err := gob.NewDecoder(bytes.NewReader(datos)).Decode(&sz); err != nil {
 		return err
 	}
-	p := nuevaParte(len(m))
-	for k, v := range m {
-		p.sumar(k, v, false)
+	if len(sz.Claves) != len(sz.Conteos) {
+		return errors.New("contador serializado inconsistente")
 	}
-	c.partes = []*parte{p}
+	c.partes = indexarEnParalelo(sz.Claves, sz.Conteos)
 	return nil
+}
+
+// minClavesParalelo es a partir de cuántas claves conviene repartir el armado
+// del índice entre goroutines (por debajo, el costo de lanzarlas no se paga).
+const minClavesParalelo = 1 << 16
+
+// indexarEnParalelo arma las partes de un Contador a partir de claves y conteos
+// paralelos, con una goroutine por parte: la g recorre todas las claves y se
+// queda con las de su partición. Recalcular la partición es necesario porque la
+// semilla del hash cambia entre procesos. Insertar en un map es lo caro de
+// cargar el cache (8 M de IPs a 20 M de líneas), y así se reparte entre núcleos.
+func indexarEnParalelo(claves []string, conteos []int) []*parte {
+	p := runtime.GOMAXPROCS(0)
+	if len(claves) < minClavesParalelo {
+		p = 1
+	}
+	partes := make([]*parte, p)
+	var wg sync.WaitGroup
+	for g := range p {
+		wg.Go(func() {
+			parte := nuevaParte(len(claves) / p)
+			for i, k := range claves {
+				if p == 1 || particionDe(k, p) == g {
+					parte.sumar(k, conteos[i], false)
+				}
+			}
+			partes[g] = parte
+		})
+	}
+	wg.Wait()
+	return partes
 }
 
 // Fuente es cualquier colección de conteos por clave sobre la que se puede

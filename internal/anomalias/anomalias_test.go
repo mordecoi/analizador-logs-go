@@ -164,3 +164,45 @@ func coincide(h anomalias.Hallazgo, tipo, ip, endpoint string, desde, hasta time
 	}
 	return h.Desde.Before(hasta) && desde.Before(h.Hasta)
 }
+
+// TestPicoNocturnoQueCruzaLaHora es la regresión del caso que encontró el log
+// de 20 M líneas: un pico de 5xx de 03:30 a 04:30 queda partido en dos franjas
+// de ~300, cada una por debajo del umbral global (que dominan las horas pico
+// del día) aunque sean 10× lo típico de la madrugada. Tiene que salir como un
+// único episodio.
+func TestPicoNocturnoQueCruzaLaHora(t *testing.T) {
+	d := anomalias.NuevoDetector(anomalias.ConfigPorDefecto())
+	inicio := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	for dia := range 10 {
+		for h := range 24 {
+			errores := 15 // madrugada
+			if h >= 9 && h <= 18 {
+				errores = 250 // horario laboral
+			}
+			for i := range errores {
+				t := inicio.Add(time.Duration(dia*24+h)*time.Hour + time.Duration(i)*time.Hour/time.Duration(errores))
+				d.Procesar(entrada(fmt.Sprintf("10.%d.%d.%d", dia, h, i%250), "/api/x", 500, t))
+			}
+		}
+	}
+	pico := inicio.Add(5*24*time.Hour + 3*time.Hour + 30*time.Minute) // día 5, 03:30
+	for i := range 600 {
+		d.Procesar(entrada(fmt.Sprintf("8.8.%d.%d", i/250, i%250), "/api/checkout", 503,
+			pico.Add(time.Duration(i)*6*time.Second)))
+	}
+
+	var picos []anomalias.Hallazgo
+	for _, h := range d.Hallazgos() {
+		if h.Tipo == "pico_5xx" {
+			picos = append(picos, h)
+		}
+	}
+	if len(picos) != 1 {
+		t.Fatalf("esperaba 1 episodio, hubo %d: %+v", len(picos), picos)
+	}
+	p := picos[0]
+	if p.Endpoint != "/api/checkout" || !p.Desde.Equal(pico.Truncate(time.Hour)) ||
+		!p.Hasta.Equal(pico.Truncate(time.Hour).Add(2*time.Hour)) || p.Cantidad < 600 {
+		t.Errorf("episodio inesperado: %+v", p)
+	}
+}
