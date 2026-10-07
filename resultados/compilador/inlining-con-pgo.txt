@@ -1,0 +1,4 @@
+      3 internal\agregado/agregado.go: inlining call to (*Contador).Incrementar
+      1 internal\agregado/contador.go: inlining call to (*Contador).parteDe
+     10 internal\parse/manual.go: inlining call to (*cursor).hasta
+      1 internal\parse/manual.go: inlining call to zonaDe

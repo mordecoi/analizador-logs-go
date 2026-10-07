@@ -1,0 +1,7 @@
+           │ sin-pgo.txt │            con-pgo.txt             │
+           │   sec/op    │   sec/op     vs base               │
+Analizar5M   764.1m ± 3%   706.8m ± 3%  -7.50% (p=0.000 n=12)
+
+           │ sin-pgo.txt  │          con-pgo.txt           │
+           │     B/op     │     B/op      vs base          │
+Analizar5M   450.0Mi ± 0%   450.8Mi ± 0%  ~ (p=0.468 n=12)

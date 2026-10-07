@@ -1,5 +1,7 @@
 # Fase 9 — Perfilado consolidado
 
+> **Nota (segundo parcial):** este documento es el registro del primer parcial y se conserva tal cual. Los programas `cmd/generar`, `cmd/analizar` y `cmd/grafico` se unificaron en un solo binario con Cobra: `go run ./cmd/analizador generar|analizar|grafico`, con los mismos flags en formato `--flag` (por ejemplo `-archivo x` pasa a ser `--archivo x` o `-a x`; la etiqueta del CSV, `-version`, pasó a `--version-etiqueta`). Ver [`SEGUNDO-PARCIAL.md`](SEGUNDO-PARCIAL.md).
+
 Responde las cinco preguntas del punto 7 del enunciado, con los perfiles de las
 tres versiones capturados en **una misma tanda** (5 M de líneas, 919 MB, binario
 compilado, máquina quieta). Extractos crudos en

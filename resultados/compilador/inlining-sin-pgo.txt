@@ -1,0 +1,12 @@
+internal\agregado/contador.go:138:2: can inline (*parte).fusionarParticion-range1 with cost 173 as: func(string, int) bool { #tmpState := #state1; #state1 = 2; if #tmpState != 1 { runtime.panicrangestate(#tmpState) }; if n == 1 || particionDe(k, n) == g { (*parte).sumar(p, k, v, false) }; #state1 = 1; return true }
+internal\agregado/contador.go:44:6: can inline (*parte).sumar with cost 71 as: method(*parte) func(string, int, bool) { if ok { p.conteos[i] += n; return  }; if clonar { clave = strings.Clone(clave) }; p.indice[clave] = len(p.conteos); p.conteos = append(p.conteos, n) }
+internal\agregado/contador.go:79:6: cannot inline (*Contador).parteDe: function too complex: cost 87 exceeds budget 80
+internal\agregado/contador.go:88:6: cannot inline (*Contador).Incrementar: function too complex: cost 135 exceeds budget 80
+internal\parse/manual.go:111:6: cannot inline ParsearManual: function too complex: cost 1509 exceeds budget 80
+internal\parse/manual.go:162:6: cannot inline parsearFecha: function too complex: cost 782 exceeds budget 80
+internal\parse/manual.go:183:6: cannot inline zonaDe: function too complex: cost 468 exceeds budget 80
+internal\parse/manual.go:42:6: can inline atoiSimple with cost 72 as: func(string) (int, bool) { if s == "" { return 0, false }; n := 0; for loop; return n, true }
+internal\parse/manual.go:73:6: cannot inline (*cursor).hasta: function too complex: cost 111 exceeds budget 80
+internal\parse/manual.go:88:6: can inline (*cursor).saltar with cost 29 as: method(*cursor) func(byte) { if !c.ok { return  }; if c.resto == "" || c.resto[0] != b { c.ok = false; return  }; c.resto = c.resto[1:] }
+internal\pipeline/lotes.go:81:6: can inline vista with cost 6 as: func([]byte) string { return <node unsafe.String> }
+internal\pipeline/lotes.go:88:6: cannot inline procesarLote: function too complex: cost 254 exceeds budget 80

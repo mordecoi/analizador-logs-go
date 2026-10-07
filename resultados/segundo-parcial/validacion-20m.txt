@@ -1,0 +1,98 @@
+Analizadas 20000000 líneas
+  tiempo          4.176s  (4789612 líneas/s)
+  heap retenido   613.3 MB
+  total asignado  1.73 GB  en 8.1 M asignaciones, 12 ciclos de GC
+
+Errores y estados más frecuentes
+  200  17045617  85.2%
+  304  1085113   5.4%
+  404  641669    3.2%
+  500  306784    1.5%
+  400  180270    0.9%
+  301  165840    0.8%
+  302  165356    0.8%
+  403  152155    0.8%
+  502  120068    0.6%
+  401  119551    0.6%
+
+Endpoints más solicitados
+  /                      2656248  13.3%
+  /api/products          1553363  7.8%
+  /health                1551279  7.8%
+  /static/css/main.css   1327437  6.6%
+  /static/js/app.js      1285282  6.4%
+  /usr/login             1218124  6.1%
+  /favicon.ico           1063362  5.3%
+  /api/products/detalle  997397   5.0%
+  /static/js/vendor.js   885327   4.4%
+  /api/search            885132   4.4%
+
+IPs más activas
+  172.108.136.203  1584611  7.9%
+  53.188.121.115   848780   4.2%
+  30.176.239.113   591825   3.0%
+  210.157.94.200   455199   2.3%
+  163.34.57.84     373386   1.9%
+  11.119.45.6      315753   1.6%
+  75.112.211.210   275070   1.4%
+  214.234.179.172  244453   1.2%
+  112.161.206.241  220197   1.1%
+  156.29.184.230   200469   1.0%
+
+Usuarios más activos
+  james     573700  2.9%
+  adam      352483  1.8%
+  eve       266129  1.3%
+  alex      217229  1.1%
+  smith     185616  0.9%
+  isabella  163491  0.8%
+  david     147315  0.7%
+  angela    133742  0.7%
+  donald    122772  0.6%
+  hilary    114606  0.6%
+
+Solicitudes por hora  (pico: 15:00 h)
+  00:00 277278  #######
+  01:00 185695  ####
+  02:00 139077  ###
+  03:00 111781  ##
+  04:00 111226  ##
+  05:00 166763  ####
+  06:00 324082  ########
+  07:00 554998  ##############
+  08:00 834060  #####################
+  09:00 1204330 ##############################
+  10:00 1480551 #####################################
+  11:00 1573800 #######################################
+  12:00 1389298 ###################################
+  13:00 1343218 ##################################
+  14:00 1574133 #######################################
+  15:00 1575205 ########################################
+  16:00 1481146 #####################################
+  17:00 1294231 ################################
+  18:00 1110465 ############################
+  19:00 925132  #######################
+  20:00 780855  ###################
+  21:00 689885  #################
+  22:00 505490  ############
+  23:00 367301  #########
+
+Validación contra el ground truth
+  total de líneas  OK  20000000 vs 20000000
+  hora pico        OK  15:00 vs 15:00
+  top endpoints    OK  10 entradas idénticas
+  top estados      OK  10 entradas idénticas
+  top IPs          OK  10 entradas idénticas
+
+Cache de consultas Top-N: 3 hits, 4 misses
+
+Detección de anomalías  (pasada secuencial extra: 28.067s)
+  1.  [rafaga]    148.251.175.245  26/01 06:03:38 → 06:04:08  500 solicitudes; hasta 500 dentro de una ventana de 1m0s
+  2.  [pico_5xx]  /api/checkout    11/03 03:00:00 → 05:00:00  645 respuestas 5xx en 2 h (típico 117/h); 600 en /api/checkout
+  3.  [escaneo]   140.92.76.177    15/04 05:15:09 → 05:17:07  80 respuestas 404 sobre 38 rutas distintas en la ventana
+
+  Contra el ground truth:
+    [rafaga]    148.251.175.245  DETECTADA
+    [pico_5xx]  /api/checkout    DETECTADA
+    [escaneo]   140.92.76.177    DETECTADA
+    recall 3/3, precisión 100%  (3 hallazgos, 0 falsos positivos)

@@ -1,5 +1,7 @@
 # Plan de trabajo — Primer Parcial (Opción 3: Analizador de logs)
 
+> **Nota (segundo parcial):** este documento es el registro del primer parcial y se conserva tal cual. Los programas `cmd/generar`, `cmd/analizar` y `cmd/grafico` se unificaron en un solo binario con Cobra: `go run ./cmd/analizador generar|analizar|grafico`, con los mismos flags en formato `--flag` (por ejemplo `-archivo x` pasa a ser `--archivo x` o `-a x`; la etiqueta del CSV, `-version`, pasó a `--version-etiqueta`). Ver [`SEGUNDO-PARCIAL.md`](SEGUNDO-PARCIAL.md).
+
 > Materia: Programación Eficiente · Lenguaje: **Go** · Opción: **3 — Analizador de grandes volúmenes de logs**
 
 ---

@@ -1,0 +1,8 @@
+goos: windows
+goarch: amd64
+pkg: parcial1/internal/parse
+cpu: AMD Ryzen 7 7730U with Radeon Graphics         
+                  │  p-off.txt  │              p-on.txt               │
+                  │   sec/op    │   sec/op     vs base                │
+Parsear/manual-16   436.3n ± 3%   361.4n ± 8%  -17.17% (p=0.000 n=10)
+

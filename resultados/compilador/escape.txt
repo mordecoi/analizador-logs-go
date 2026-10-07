@@ -1,0 +1,78 @@
+parse/manual.go:11:34: map[string]time.Month{...} escapes to heap
+parse/manual.go:28:2: make(map[int]*time.Location, 128) escapes to heap
+parse/manual.go:28:2: ... argument does not escape
+parse/manual.go:28:2: minutos / 60 escapes to heap
+parse/manual.go:28:2: (~r0) % 60 escapes to heap
+parse/manual.go:22:11: make(map[int]*time.Location, 128) escapes to heap
+parse/manual.go:24:24: ... argument does not escape
+parse/manual.go:24:62: (~r0) % 60 escapes to heap
+parse/manual.go:88:7: c does not escape
+parse/manual.go:185:25: ... argument does not escape
+parse/manual.go:185:25: &errors.errorString{...} escapes to heap
+parse/manual.go:190:25: ... argument does not escape
+parse/manual.go:190:25: &errors.errorString{...} escapes to heap
+parse/manual.go:164:33: ... argument does not escape
+parse/manual.go:164:33: &errors.errorString{...} escapes to heap
+parse/manual.go:173:33: ... argument does not escape
+parse/manual.go:173:33: &errors.errorString{...} escapes to heap
+parse/manual.go:143:31: ... argument does not escape
+parse/manual.go:143:60: linea escapes to heap
+parse/manual.go:143:31: &errors.errorString{...} escapes to heap
+parse/manual.go:148:31: ... argument does not escape
+parse/manual.go:148:31: &errors.errorString{...} escapes to heap
+agregado/contador.go:79:28: clave does not escape
+agregado/contador.go:88:70: make([]byte, len(stringslite.s)) escapes to heap
+agregado/contador.go:88:70: append escapes to heap
+agregado/contador.go:130:26: o does not escape
+agregado/contador.go:132:10: make([]byte, len(stringslite.s)) escapes to heap
+agregado/contador.go:132:10: append escapes to heap
+agregado/contador.go:137:35: c does not escape
+agregado/contador.go:165:14: yield does not escape
+agregado/contador.go:138:25: func literal does not escape
+agregado/contador.go:138:2: make([]byte, len(stringslite.s)) escapes to heap
+agregado/contador.go:138:2: append escapes to heap
+agregado/contador.go:104:2: moved to heap: total
+agregado/contador.go:105:2: moved to heap: alineados
+agregado/contador.go:111:6: moved to heap: wg
+agregado/contador.go:110:9: &Contador{...} escapes to heap
+agregado/contador.go:110:31: make([]*parte, p) escapes to heap
+agregado/contador.go:113:9: func literal escapes to heap
+agregado/contador.go:114:25: &parte{...} escapes to heap
+agregado/contador.go:114:25: make(map[string]int, capacidad) escapes to heap
+agregado/contador.go:114:25: make([]int, 0, capacidad) escapes to heap
+agregado/contador.go:177:7: c does not escape
+agregado/contador.go:165:14: yield does not escape
+agregado/contador.go:178:27: func literal does not escape
+agregado/contador.go:178:21: make(map[go.shape.string]go.shape.int) escapes to heap
+agregado/contador.go:64:66: &Contador{...} escapes to heap
+agregado/contador.go:64:66: make([]*parte, max(p, 1)) escapes to heap
+agregado/contador.go:64:66: &parte{...} escapes to heap
+agregado/contador.go:64:66: make(map[string]int, capacidad) escapes to heap
+agregado/contador.go:64:66: make([]int, 0, 0) escapes to heap
+agregado/contador.go:71:7: &Contador{...} escapes to heap
+agregado/contador.go:71:29: make([]*parte, max(p, 1)) escapes to heap
+agregado/contador.go:73:27: &parte{...} escapes to heap
+agregado/contador.go:73:27: make(map[string]int, capacidad) escapes to heap
+agregado/contador.go:73:27: make([]int, 0, 0) escapes to heap
+agregado/contador.go:146:7: c does not escape
+agregado/contador.go:146:26: clave does not escape
+agregado/contador.go:155:7: c does not escape
+agregado/contador.go:165:14: yield does not escape
+agregado/contador.go:165:9: func literal escapes to heap
+agregado/contador.go:182:7: c does not escape
+agregado/contador.go:183:6: moved to heap: buf
+agregado/contador.go:184:23: new(gob.Encoder) escapes to heap
+agregado/contador.go:184:23: []io.Writer{...} escapes to heap
+agregado/contador.go:184:23: make(map[reflect.Type]gob.typeId) escapes to heap
+agregado/contador.go:184:23: new(gob.encBuffer) escapes to heap
+agregado/contador.go:184:23: new(gob.encoderState) escapes to heap
+agregado/contador.go:190:7: c does not escape
+agregado/contador.go:191:6: moved to heap: m
+agregado/contador.go:195:17: &parte{...} escapes to heap
+agregado/contador.go:195:17: make(map[string]int, capacidad) escapes to heap
+agregado/contador.go:195:17: make([]int, 0, capacidad) escapes to heap
+agregado/contador.go:197:10: make([]byte, len(stringslite.s)) escapes to heap
+agregado/contador.go:197:10: append escapes to heap
+agregado/contador.go:199:21: []*parte{...} escapes to heap
+pipeline/lotes.go:38:14: make([]byte, 2 * len(buf)) escapes to heap
+pipeline/lotes.go:88:69: agregar does not escape

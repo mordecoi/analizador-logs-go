@@ -1,13 +1,13 @@
  parcial1/cmd/analizador coverage: 0.0% of statements
-ok parcial1/internal/agregado 2.164s coverage: 99.3% of statements
-ok parcial1/internal/anomalias 2.712s coverage: 96.1% of statements
-ok parcial1/internal/cache 1.144s coverage: 94.4% of statements
-ok parcial1/internal/cli 3.248s coverage: 87.5% of statements
+ok parcial1/internal/agregado 2.444s coverage: 98.7% of statements
+ok parcial1/internal/anomalias 2.530s coverage: 96.8% of statements
+ok parcial1/internal/cache 1.222s coverage: 94.4% of statements
+ok parcial1/internal/cli 3.543s coverage: 87.5% of statements
 ok parcial1/internal/grafico (cached) coverage: 98.7% of statements
-ok parcial1/internal/loggen 2.832s coverage: 95.1% of statements
+ok parcial1/internal/loggen 3.050s coverage: 95.1% of statements
 ok parcial1/internal/medicion (cached) coverage: 93.8% of statements
-ok parcial1/internal/parse 1.525s coverage: 92.8% of statements
-ok parcial1/internal/pipeline 2.563s coverage: 87.4% of statements
-ok parcial1/internal/reporte 1.050s coverage: 95.7% of statements
+ok parcial1/internal/parse 1.761s coverage: 92.8% of statements
+ok parcial1/internal/pipeline 2.789s coverage: 87.4% of statements
+ok parcial1/internal/reporte 1.180s coverage: 95.7% of statements
 ok parcial1/internal/telemetria (cached) coverage: 90.0% of statements
-total:						(statements)			92.5%
+total:						(statements)			92.6%

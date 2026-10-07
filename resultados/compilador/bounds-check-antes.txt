@@ -1,0 +1,4 @@
+internal\parse/manual.go:82:16: Found IsSliceInBounds
+internal\parse/manual.go:83:19: Found IsSliceInBounds
+internal\parse/manual.go:127:24: Found IsSliceInBounds
+internal\parse/manual.go:127:33: Found IsSliceInBounds
