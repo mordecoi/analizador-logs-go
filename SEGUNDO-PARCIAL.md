@@ -401,6 +401,7 @@ ejemplos y cobertura.
 | **Bordes del lector** | lotes de 1 byte, líneas más largas que el buffer, CRLF, sin salto final, líneas vacías |
 | **Integración con OTLP** | un receptor OTLP falso (`httptest`) verifica que los spans lleguen |
 | **Ejemplos** | 6 funciones `Example`, verificadas por `go test` |
+| **Detector de carreras** | `go test -race ./...` en un contenedor Linux (en Windows requiere gcc): los 11 paquetes pasan sin data races, incluida la fusión paralela y el productor-consumidor ([`race-detector.txt`](resultados/calidad/race-detector.txt)) |
 | **Barrido de semillas** | 12 logs de 1 M y 3 de 5 M con semillas distintas: 45/45 anomalías detectadas, 0 falsos positivos |
 
 **Cobertura: 51,0 % → 92,6 %**

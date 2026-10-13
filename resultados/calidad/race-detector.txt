@@ -1,0 +1,12 @@
+?   	parcial1/cmd/analizador	[no test files]
+ok  	parcial1/internal/agregado	13.972s
+ok  	parcial1/internal/anomalias	19.055s
+ok  	parcial1/internal/cache	1.147s
+ok  	parcial1/internal/cli	14.267s
+ok  	parcial1/internal/grafico	1.081s
+ok  	parcial1/internal/loggen	21.008s
+ok  	parcial1/internal/medicion	1.088s
+ok  	parcial1/internal/parse	5.340s
+ok  	parcial1/internal/pipeline	8.146s
+ok  	parcial1/internal/reporte	1.098s
+ok  	parcial1/internal/telemetria	1.164s
