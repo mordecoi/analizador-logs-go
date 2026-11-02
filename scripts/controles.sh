@@ -127,9 +127,8 @@ docs() {
 	mapfile -t archivos < <(git ls-files '*.md' ':!docs/api/internal')
 	# Se excluye lo que no se puede verificar desde el CI: artifacts que piden
 	# sesión, el sitio y el badge. Un error temporal del servidor (429, 502, 503,
-	# 504) no prueba que el enlace esté roto. MSYS_NO_PATHCONV evita que Git Bash en
-	# Windows trate las expresiones regulares como rutas.
-	MSYS_NO_PATHCONV=1 lychee --no-progress --exclude-loopback --accept '200..=299,429,502..=504' \
+	# 504) no prueba que el enlace esté roto.
+	lychee --no-progress --exclude-loopback --accept '200..=299,429,502..=504' \
 		--exclude '^https://claude\.ai/' \
 		--exclude '^https://mordecoi\.github\.io/' \
 		--exclude '^https://github\.com/mordecoi/analizador-logs-go/actions' \
