@@ -59,3 +59,5 @@ func Bytes[T int64 | uint64 | int](b T) string {
 
 // MB expresa b en mebibytes, para columnas numéricas (CSV).
 func MB(b uint64) float64 { return float64(b) / (1 << 20) }
+
+func sinUso() {}
