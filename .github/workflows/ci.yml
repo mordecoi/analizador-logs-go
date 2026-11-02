@@ -115,7 +115,7 @@ jobs:
         run: |
           gh release download "$VERSION" -R lycheeverse/lychee -p "$ARCHIVO" -p "$ARCHIVO.sha256"
           sha256sum -c "$ARCHIVO.sha256"
-          tar -xzf "$ARCHIVO" -C "$RUNNER_TEMP"
+          tar -xzf "$ARCHIVO" -C "$RUNNER_TEMP" --strip-components=1
           rm "$ARCHIVO" "$ARCHIVO.sha256"
           echo "$RUNNER_TEMP" >>"$GITHUB_PATH"
       - run: bash scripts/controles.sh docs
