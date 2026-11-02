@@ -11,7 +11,7 @@
     ```
 
 4. Ejecutar `scripts/controles.sh todo`.
-5. Abrir un PR hacia `main`. Para integrarlo hacen falta **una aprobación** y el check **Resultado** en verde.
+5. Abrir un PR hacia `main`. Para integrarlo hace falta el check **Resultado** en verde. No se exige una aprobación, así que cada integrante puede integrar sus propios PR, pero nadie puede hacerlo con el check en rojo: la regla también se aplica a los administradores.
 
 Si un cambio toca el camino caliente, conviene regenerar `cmd/analizador/default.pgo` (ver [`SEGUNDO-PARCIAL.md`](https://github.com/mordecoi/analizador-logs-go/blob/main/SEGUNDO-PARCIAL.md), sección 2).
 
@@ -98,6 +98,8 @@ Cada PR de prueba rompió un solo control a propósito y se cerró sin integrar.
 | [#5](https://github.com/mordecoi/analizador-logs-go/pull/5) | Un secreto inventado | Seguridad | `leaks found: 1` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396350580) |
 | [#6](https://github.com/mordecoi/analizador-logs-go/pull/6) | Un enlace roto | Documentación | `docs/no-existe.md: File not found` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396354607) |
 | [#7](https://github.com/mordecoi/analizador-logs-go/pull/7) | Una copia por línea en el parser | Rendimiento y memoria | `Parsear/manual sec/op +44.15%`; `memoria asignada: 279.5 MB (máximo: 82)` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396380575) |
+
+Con la protección de `main` activa, GitHub informó el PR #7 como `BLOCKED`, por su check **Resultado** en rojo: no se puede integrar.
 
 Estas pruebas también encontraron fallas del propio pipeline, ya corregidas:
 
