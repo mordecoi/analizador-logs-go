@@ -1,0 +1,6 @@
+# Datos del repositorio para los enlaces al código de docs/api/. Sin esto,
+# gomarkdoc los deduce de git, y en el checkout del CI no los encuentra.
+repository:
+  url: https://github.com/mordecoi/analizador-logs-go
+  defaultBranch: main
+  path: /
