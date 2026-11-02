@@ -1,6 +1,10 @@
 # Analizador de grandes volúmenes de logs
 
-Primer y segundo parcial de **Programación Eficiente**: Opción 3, implementado en **Go**.
+[![CI](https://github.com/mordecoi/analizador-logs-go/actions/workflows/ci.yml/badge.svg)](https://github.com/mordecoi/analizador-logs-go/actions/workflows/ci.yml)
+
+Parciales de **Programación Eficiente**: Opción 3, implementado en **Go**.
+
+📖 [**Documentación del proyecto**](https://mordecoi.github.io/analizador-logs-go/): funcionamiento, arquitectura, pruebas, rendimiento, seguridad y mantenimiento.
 
 Procesa logs de servidor en formato **Apache Combined** y extrae errores más frecuentes, endpoints
 más solicitados, usuarios e IPs más activos, horas pico y patrones anómalos. El foco del trabajo no
@@ -150,6 +154,7 @@ falla, el programa sale con código 2, para distinguirlo de un error de ejecuci�
 ## Desarrollo
 
 ```bash
+scripts/controles.sh todo                               # los mismos controles que el CI
 go test ./... -cover                                    # tests de los 11 paquetes
 go test ./internal/parse -run '^$' -fuzz Fuzz -fuzztime 60s
 go test ./internal/pipeline -run '^$' -bench . -benchmem  # lectura: ReadString vs lotes

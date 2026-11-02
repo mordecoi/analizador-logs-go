@@ -24,3 +24,6 @@ ground-truth.json
 
 # Reportes de scripts/controles.sh; en CI se suben como artefactos
 /reportes/
+
+# Sitio generado por mkdocs
+/site/
