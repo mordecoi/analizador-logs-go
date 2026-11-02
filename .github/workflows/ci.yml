@@ -1,0 +1,165 @@
+# Pipeline de integración continua. Cada job ejecuta una etapa de
+# scripts/controles.sh, el mismo script que se corre localmente.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  estatico:
+    name: Calidad estática
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: bash scripts/controles.sh estatico
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: estatico
+          path: reportes/
+
+  pruebas:
+    name: Pruebas y cobertura
+    needs: estatico
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: bash scripts/controles.sh pruebas
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: pruebas
+          path: reportes/
+
+  seguridad:
+    name: Seguridad
+    needs: estatico
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # gitleaks revisa todo el historial
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: bash scripts/controles.sh seguridad
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: seguridad
+          path: reportes/
+      - uses: github/codeql-action/upload-sarif@8498dc4c2b27cdd99baf0f87955b29ebbf30c78d # v4.39.1
+        # Un PR desde un fork no tiene permiso para subir resultados.
+        if: always() && hashFiles('reportes/gosec.sarif') != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          sarif_file: reportes/gosec.sarif
+          category: gosec
+      - uses: github/codeql-action/upload-sarif@8498dc4c2b27cdd99baf0f87955b29ebbf30c78d # v4.39.1
+        if: always() && hashFiles('reportes/gitleaks.sarif') != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          sarif_file: reportes/gitleaks.sarif
+          category: gitleaks
+
+  docs:
+    name: Documentación
+    needs: estatico
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - run: python -m pip install -r docs/requirements.txt
+      - name: Instalar lychee
+        env:
+          VERSION: lychee-v0.24.2
+          ARCHIVO: lychee-x86_64-unknown-linux-gnu.tar.gz
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$VERSION" -R lycheeverse/lychee -p "$ARCHIVO" -p "$ARCHIVO.sha256"
+          sha256sum -c "$ARCHIVO.sha256"
+          tar -xzf "$ARCHIVO" -C "$RUNNER_TEMP" --strip-components=1
+          rm "$ARCHIVO" "$ARCHIVO.sha256"
+          echo "$RUNNER_TEMP" >>"$GITHUB_PATH"
+      - run: bash scripts/controles.sh docs
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # lychee: evita el límite de la API
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: docs
+          path: reportes/
+
+  rendimiento:
+    name: Rendimiento y memoria
+    needs: pruebas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # compara contra la versión base
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: bash scripts/controles.sh rendimiento
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: rendimiento
+          path: reportes/
+
+  resultado:
+    name: Resultado
+    needs: [estatico, pruebas, seguridad, docs, rendimiento]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Todas las etapas deben aprobar
+        env:
+          RESULTADOS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "resultados: $RESULTADOS"
+          for r in $RESULTADOS; do
+            [ "$r" = success ] || exit 1
+          done

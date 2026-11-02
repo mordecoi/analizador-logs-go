@@ -1,0 +1,11 @@
+# Actualizaciones de dependencias y alertas de seguridad. Cada PR pasa por el CI.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -143,7 +143,7 @@ El enunciado lista herramientas de Python. Equivalencias en Go — con la ventaj
 - **Hecho**: `go build ./...` y `go vet ./...` pasan en verde.
 
 ### Fase 1 — Generador de datos ✅
-- [`internal/loggen/loggen.go`](internal/loggen/loggen.go) + [`cmd/generar/main.go`](cmd/generar/main.go). Formato Apache Combined.
+- [`internal/loggen/loggen.go`](internal/loggen/loggen.go) + [`internal/cli/generar.go`](internal/cli/generar.go). Formato Apache Combined.
   - Timestamps por **proceso de Poisson no homogéneo** (curva horaria + fin de semana) → salida cronológica, pico 11 h.
   - **Muestreo Zipf** para endpoints (27 rutas), IPs (pool de 200 heavy + cola larga) y usuarios; status/bytes/latencia por categoría de endpoint.
   - **3 anomalías** con ventana exacta en `ground-truth.json`: (a) ráfaga de 500 POST a `/usr/login` en 30 s desde una IP nueva, (b) ~600 5xx en `/api/checkout` en 1 h, (c) escaneo de 41 rutas por una IP en 2 min. Calibradas para ser invisibles en el agregado a escala ≥ 1M pero detectables por ventana.
@@ -155,7 +155,7 @@ El enunciado lista herramientas de Python. Equivalencias en Go — con la ventaj
 ### Fase 2 — Baseline (v0) ✅
 - [`internal/parse`](internal/parse/parse.go): `Parsear(string)` con **una regex + submatches** + `time.Parse` + `strconv.Atoi`.
 - [`internal/agregado`](internal/agregado/agregado.go): `Contadores` (`map[int]int` estados, `map[string]int` endpoints/IPs/usuarios, `[24]int` por hora) + `TopN[K]` genérico por **sort completo** O(u·log u).
-- [`cmd/analizar`](cmd/analizar/main.go): `bufio.Scanner` secuencial, mide tiempo/heap/total-asignado/GC, reporta con `tabwriter` (rankings + histograma horario), **valida contra `ground-truth.json`** y agrega fila a `resultados/comparativa.csv`.
+- [`internal/cli/analizar.go`](internal/cli/analizar.go): `bufio.Scanner` secuencial, mide tiempo/heap/total-asignado/GC, reporta con `tabwriter` (rankings + histograma horario), **valida contra `ground-truth.json`** y agrega fila a `resultados/comparativa.csv`.
 - Tests: parseo de líneas válidas/malformadas, contadores, orden y desempate de `TopN`, y roundtrip generar→parsear→agregar contra el ground truth.
 - **Hecho**: 1 M líneas, validación contra `ground-truth.json` toda en OK. Baseline: **~3,1–3,8 s**, heap retenido **98,6 MB**, **584 MB** total asignado (6× el heap → presión de GC del regex), 3,0 M asignaciones, 30 ciclos de GC.
 
@@ -232,7 +232,7 @@ El enunciado lista herramientas de Python. Equivalencias en Go — con la ventaj
 
 ### Fase 10 — Tabla comparativa y escalabilidad ✅
 - Tanda única y continua sobre **1 M / 5 M / 20 M** (20 M = 3,59 GB) con el binario compilado → [`resultados/comparativa.csv`](resultados/comparativa.csv), [`resultados/escalabilidad.csv`](resultados/escalabilidad.csv), resumen en [`resultados/fase10-escalabilidad.txt`](resultados/fase10-escalabilidad.txt).
-- [`cmd/grafico`](cmd/grafico/main.go) (solo stdlib: el SVG es texto) genera [`resultados/escalabilidad.svg`](resultados/escalabilidad.svg): **log-log, 4 rectas de pendiente ~1 = O(n) a la vista**.
+- [`internal/cli/grafico.go`](internal/cli/grafico.go) (solo stdlib: el SVG es texto) genera [`resultados/escalabilidad.svg`](resultados/escalabilidad.svg): **log-log, 4 rectas de pendiente ~1 = O(n) a la vista**.
 - Validación @20 M contra ground truth: toda OK.
 - Hallazgo fino: la *forma* es O(n) pero la constante de v3 sube ~40 % de 1 M a 20 M (3,06 → 1,84 M líneas/s): los mapas de IPs (0,4 → 8 M claves) desbordan las cachés. v0 en cambio es plano (~140 k/s): el regex domina tanto que esconde el efecto.
 - **Hecho**: tabla obligatoria completa (sección 5) y gráfico con pendientes.

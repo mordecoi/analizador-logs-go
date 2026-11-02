@@ -1,0 +1,9 @@
+// Solo las páginas del sitio escritas a mano: docs/api/ es generada y los
+// documentos de la raíz son el registro de los parciales anteriores.
+{
+  "globs": ["docs/*.md"],
+  "config": {
+    "MD013": false, // las tablas y los párrafos no se cortan a un ancho fijo
+    "MD060": false // separadores de tabla compactos (|---|), como en todo el repo
+  }
+}

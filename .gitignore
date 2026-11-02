@@ -18,3 +18,12 @@ ground-truth.json
 
 # Logs de prueba generados localmente
 /datos/
+
+# Consigna del parcial, no se versiona
+/Parcial-3(1).md
+
+# Reportes de scripts/controles.sh; en CI se suben como artefactos
+/reportes/
+
+# Sitio generado por mkdocs
+/site/

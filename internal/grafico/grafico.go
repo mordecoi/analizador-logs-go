@@ -32,6 +32,10 @@ type Punto struct {
 
 var colores = []string{"#c0392b", "#d68910", "#2471a3", "#1e8449", "#7d3c98", "#5d6d7e"}
 
+// resolucionMs es la mitad del último decimal del CSV: una corrida más rápida
+// queda escrita como 0.0, y el cero no existe en escala logarítmica.
+const resolucionMs = 0.05
+
 // Leer agrupa las filas del CSV por versión, ordenadas por n.
 func Leer(ruta string) (Series, error) {
 	f, err := os.Open(ruta)
@@ -58,14 +62,14 @@ func Leer(ruta string) (Series, error) {
 		}
 		n, err1 := strconv.ParseFloat(fila[2], 64)
 		ms, err2 := strconv.ParseFloat(fila[3], 64)
-		if err1 != nil || err2 != nil {
+		if err1 != nil || err2 != nil || n <= 0 {
 			continue
 		}
 		v := fila[0]
 		if _, visto := series[v]; !visto {
 			orden = append(orden, v)
 		}
-		series[v] = append(series[v], Punto{n, ms})
+		series[v] = append(series[v], Punto{n, max(ms, resolucionMs)})
 	}
 	for v := range series {
 		slices.SortFunc(series[v], func(a, b Punto) int { return cmp.Compare(a.N, b.N) })

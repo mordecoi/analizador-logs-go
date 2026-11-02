@@ -1,0 +1,63 @@
+site_name: Analizador de logs
+site_description: Documentación funcional, técnica y operativa del analizador de grandes volúmenes de logs
+site_url: https://mordecoi.github.io/analizador-logs-go/
+repo_url: https://github.com/mordecoi/analizador-logs-go
+edit_uri: edit/main/docs/
+strict: true
+
+theme:
+  name: material
+  language: es
+  features:
+    - content.code.copy
+    - navigation.sections
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Modo oscuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Modo claro
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+exclude_docs: |
+  requirements.txt
+
+nav:
+  - Descripción funcional: index.md
+  - Arquitectura: arquitectura.md
+  - Instalación y ejecución: instalacion.md
+  - Diseño técnico: diseno.md
+  - API y contratos:
+      - CLI y contratos: api.md
+      - Paquetes (generado):
+          - Índice: api/README.md
+          - agregado: api/internal/agregado.md
+          - anomalias: api/internal/anomalias.md
+          - cache: api/internal/cache.md
+          - cli: api/internal/cli.md
+          - grafico: api/internal/grafico.md
+          - loggen: api/internal/loggen.md
+          - medicion: api/internal/medicion.md
+          - parse: api/internal/parse.md
+          - pipeline: api/internal/pipeline.md
+          - reporte: api/internal/reporte.md
+          - telemetria: api/internal/telemetria.md
+  - Pruebas: pruebas.md
+  - Rendimiento: rendimiento.md
+  - Seguridad: seguridad.md
+  - Mantenimiento: mantenimiento.md
