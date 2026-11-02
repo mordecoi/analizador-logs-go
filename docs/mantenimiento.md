@@ -86,6 +86,27 @@ Diferencias que hay que tener en cuenta:
 - **Rendimiento:** localmente compara contra el punto donde la rama se separó de `main`. Se puede cambiar con `BASE_REF=<commit>`. Los límites de memoria se fijaron con mediciones del runner, y pueden variar un poco en otra máquina.
 - **Versión de Go:** el CI usa la de `go.mod`. Con una versión de Go más nueva, `govulncheck` analiza otra biblioteca estándar y puede dar otro resultado. Para reproducirlo: `GOTOOLCHAIN=go1.26.10 scripts/controles.sh seguridad`.
 
+## Evidencia de rechazo
+
+Cada PR de prueba rompió un solo control a propósito y se cerró sin integrar. El check **Resultado** falló en todos. Los enlaces llevan a la ejecución del pipeline.
+
+| PR | Qué rompe | Etapa que rechazó | Motivo informado | Ejecución |
+|---|---|---|---|---|
+| [#2](https://github.com/mordecoi/analizador-logs-go/pull/2) | Una prueba que falla | Pruebas y cobertura | `--- FAIL: TestFallaAProposito` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396339594) |
+| [#3](https://github.com/mordecoi/analizador-logs-go/pull/3) | Una función sin usar | Calidad estática | `func sinUso is unused` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396342937) |
+| [#4](https://github.com/mordecoi/analizador-logs-go/pull/4) | Borra los tests de la CLI | Pruebas y cobertura, y Documentación | `cobertura total: 75.8 % (mínimo: 85 %)`; además, un documento enlazaba ese archivo | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396345577) |
+| [#5](https://github.com/mordecoi/analizador-logs-go/pull/5) | Un secreto inventado | Seguridad | `leaks found: 1` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396350580) |
+| [#6](https://github.com/mordecoi/analizador-logs-go/pull/6) | Un enlace roto | Documentación | `docs/no-existe.md: File not found` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396354607) |
+| [#7](https://github.com/mordecoi/analizador-logs-go/pull/7) | Una copia por línea en el parser | Rendimiento y memoria | `Parsear/manual sec/op +44.15%`; `memoria asignada: 279.5 MB (máximo: 82)` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396380575) |
+
+Estas pruebas también encontraron fallas del propio pipeline, ya corregidas:
+
+| Falla | Corrección |
+|---|---|
+| `gitleaks` revisaba todas las ramas: el secreto de una rama hacía fallar el CI de las demás, incluida `main` | Revisa solo el historial de la versión probada |
+| Un `504` temporal de GitHub rechazó un PR sin relación | Los errores temporales no rechazan, y los enlaces generados de `docs/api` no se revisan |
+| Pasar de 0 asignaciones a alguna no se detectaba por sí solo: `benchstat` no da un porcentaje si la base es 0 | La comparación cubre ese caso. La ejecución de #7 es anterior a esta corrección y su regresión se detectó por otras métricas |
+
 ## Reportes
 
 Localmente quedan en `reportes/`, que no se versiona. En GitHub se descargan desde la ejecución del pipeline, en la sección **Artifacts**, con un artefacto por etapa. Los SARIF de `gosec` y `gitleaks` también aparecen en la pestaña **Security**, en *Code scanning*.

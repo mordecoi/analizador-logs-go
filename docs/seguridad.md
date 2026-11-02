@@ -13,7 +13,7 @@ El analizador es una herramienta local: no abre puertos y no maneja credenciales
 | Logs muy grandes | Agotamiento de memoria, porque el mapa de IPs crece O(n) | Límite de memoria medido en el CI; riesgo operativo documentado en [Rendimiento](rendimiento.md#complejidad-temporal) |
 | Dependencias vulnerables | Código de terceros con fallas conocidas | `govulncheck` y Dependabot |
 | Cadena de suministro del CI | Una acción de terceros modificada | Acciones fijadas por SHA y permisos mínimos |
-| Secretos en el repositorio | Filtración de credenciales | `gitleaks` sobre todo el historial; hoy sin hallazgos |
+| Secretos en el repositorio | Filtración de credenciales | `gitleaks` sobre todo el historial de la versión probada; hoy sin hallazgos |
 
 ## Controles
 
