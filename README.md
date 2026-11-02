@@ -191,3 +191,5 @@ Y tres del segundo:
 - **Una optimización puede dejar de convenir.** Cuando el análisis se aceleró 3,4×, cargar el
   cache, que era secuencial, pasó a tardar más que recalcular todo. Hubo que paralelizar
   también la carga.
+
+[Enlace roto](docs/no-existe.md)
