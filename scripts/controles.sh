@@ -93,8 +93,10 @@ seguridad() {
 	go run "$GOVULNCHECK" -format=sarif ./... >"$REPORTES/govulncheck.sarif"
 	go run "$GOVULNCHECK" ./... | tee "$REPORTES/govulncheck.txt"
 
-	titulo "gitleaks: secretos en todo el historial"
-	go run "$GITLEAKS" git --redact --no-banner \
+	# Solo el historial de esta versión: por defecto revisa todas las ramas, y un
+	# secreto en una rama haría fallar el CI de todas las demás.
+	titulo "gitleaks: secretos en el historial de esta versión"
+	go run "$GITLEAKS" git --redact --no-banner --log-opts=HEAD \
 		--report-format=sarif --report-path="$REPORTES/gitleaks.sarif"
 }
 
@@ -120,10 +122,14 @@ docs() {
 
 	titulo "enlaces de los Markdown versionados"
 	local archivos
-	mapfile -t archivos < <(git ls-files '*.md')
+	# docs/api queda afuera: sus enlaces al código los genera gomarkdoc, que ya se
+	# verifica arriba, y son cientos de pedidos a GitHub que a veces dan 504.
+	mapfile -t archivos < <(git ls-files '*.md' ':!docs/api/internal')
 	# Se excluye lo que no se puede verificar desde el CI: artifacts que piden
-	# sesión, el sitio y el badge (no existen hasta el primer despliegue).
-	lychee --no-progress --exclude-loopback --accept '200..=299,429' \
+	# sesión, el sitio y el badge. Un error temporal del servidor (429, 502, 503,
+	# 504) no prueba que el enlace esté roto. MSYS_NO_PATHCONV evita que Git Bash en
+	# Windows trate las expresiones regulares como rutas.
+	MSYS_NO_PATHCONV=1 lychee --no-progress --exclude-loopback --accept '200..=299,429,502..=504' \
 		--exclude '^https://claude\.ai/' \
 		--exclude '^https://mordecoi\.github\.io/' \
 		--exclude '^https://github\.com/mordecoi/analizador-logs-go/actions' \
