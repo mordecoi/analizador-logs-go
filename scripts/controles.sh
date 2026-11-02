@@ -30,11 +30,8 @@ REPETICIONES_BENCH=6
 LINEAS_E2E=1000000
 SEMILLA_E2E=42
 WORKERS_E2E=4
-HEAP_MAX_MB=${HEAP_MAX_MB:-30}
-ASIGNADO_MAX_MB=${ASIGNADO_MAX_MB:-85}
-
-# RENDIMIENTO_BLOQUEA=0 informa las regresiones sin rechazar.
-RENDIMIENTO_BLOQUEA=${RENDIMIENTO_BLOQUEA:-1}
+HEAP_MAX_MB=29
+ASIGNADO_MAX_MB=82
 
 REPORTES=$PWD/reportes
 mkdir -p "$REPORTES"
@@ -248,11 +245,8 @@ rendimiento() {
 	fi
 
 	if [ "$rechazado" = 1 ]; then
-		if [ "$RENDIMIENTO_BLOQUEA" = 1 ]; then
-			echo "RECHAZADO: regresión de rendimiento o de memoria"
-			return 1
-		fi
-		echo "AVISO: hay una regresión, pero RENDIMIENTO_BLOQUEA=0 no rechaza"
+		echo "RECHAZADO: regresión de rendimiento o de memoria"
+		return 1
 	fi
 }
 

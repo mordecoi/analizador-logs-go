@@ -76,12 +76,13 @@ jobs:
           name: seguridad
           path: reportes/
       - uses: github/codeql-action/upload-sarif@8498dc4c2b27cdd99baf0f87955b29ebbf30c78d # v4.39.1
-        if: always() && hashFiles('reportes/gosec.sarif') != ''
+        # Un PR desde un fork no tiene permiso para subir resultados.
+        if: always() && hashFiles('reportes/gosec.sarif') != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
         with:
           sarif_file: reportes/gosec.sarif
           category: gosec
       - uses: github/codeql-action/upload-sarif@8498dc4c2b27cdd99baf0f87955b29ebbf30c78d # v4.39.1
-        if: always() && hashFiles('reportes/gitleaks.sarif') != ''
+        if: always() && hashFiles('reportes/gitleaks.sarif') != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
         with:
           sarif_file: reportes/gitleaks.sarif
           category: gitleaks
@@ -141,9 +142,6 @@ jobs:
         with:
           go-version-file: go.mod
       - run: bash scripts/controles.sh rendimiento
-        env:
-          # Solo informa hasta fijar los límites con mediciones del runner.
-          RENDIMIENTO_BLOQUEA: "0"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

@@ -60,10 +60,23 @@ Los benchmarks varían según la máquina, por lo que **no se comparan contra n�
 |---|---|---|
 | Tiempo de benchmarks | Sube más de 20 % con p < 0,05 | Los runners compartidos tienen ruido |
 | `B/op` y `allocs/op` | Suben más de 5 % con p < 0,05 | Casi no varían entre corridas |
-| Heap retenido a 1 M líneas | Supera el límite en `controles.sh` | Medido con semilla y workers fijos |
-| Memoria asignada a 1 M líneas | Supera el límite en `controles.sh` | Medido con semilla y workers fijos |
+| Heap retenido a 1 M líneas | Supera 29 MB | Máximo medido más 20 % |
+| Memoria asignada a 1 M líneas | Supera 82 MB | Máximo medido más 20 % |
 | Validación contra el *ground truth* | Cualquier diferencia | Es correctitud, no una medición |
 
 Se mide con estos benchmarks: `BenchmarkParsear`, `BenchmarkLectura`, `BenchmarkFormatoLinea` y un caso de `BenchmarkTopN`. Quedan afuera `BenchmarkEscrituraBuffer` (ruido del disco), `BenchmarkTamLote` (exploratorio) y el resto de los casos de `BenchmarkTopN`, que tardan minutos.
 
-El tiempo total del análisis se informa, pero no rechaza: una sola corrida en un runner compartido no alcanza para distinguir una regresión del ruido.
+### De dónde salen los límites
+
+Seis ejecuciones de la etapa en los runners de GitHub, con 1 M de líneas, semilla 42 y 4 workers:
+
+| Medición | Mínimo | Máximo | Límite |
+|---|---:|---:|---:|
+| Heap retenido | 24,1 MB | 24,3 MB | 29 MB |
+| Memoria asignada | 66,7 MB | 67,7 MB | 82 MB |
+| Tiempo del análisis | 140 ms | 253 ms | No rechaza |
+| Mayor suba de tiempo en un benchmark, con p < 0,05 | — | +1,08 % | +20 % |
+
+La memoria casi no cambia entre corridas, incluso con procesadores distintos, por lo que admite un límite fijo. El tiempo sí cambia: esas seis ejecuciones cayeron en cuatro modelos de CPU (AMD EPYC 9V45 y 7763, Intel Xeon 8573C y 8370C). Por eso el tiempo total se informa, pero no rechaza, y los benchmarks se comparan siempre dentro del mismo job.
+
+En las seis ejecuciones, la versión base y la actual solo diferían en cambios ajenos a los benchmarks, y ninguna dio una regresión falsa.
