@@ -43,7 +43,7 @@ nav:
   - Instalación y ejecución: instalacion.md
   - Diseño técnico: diseno.md
   - API y contratos:
-      - CLI y contratos: api.md
+      - CLI y contratos: cli.md
       - Paquetes (generado):
           - Índice: api/README.md
           - agregado: api/internal/agregado.md
