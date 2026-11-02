@@ -93,8 +93,10 @@ seguridad() {
 	go run "$GOVULNCHECK" -format=sarif ./... >"$REPORTES/govulncheck.sarif"
 	go run "$GOVULNCHECK" ./... | tee "$REPORTES/govulncheck.txt"
 
-	titulo "gitleaks: secretos en todo el historial"
-	go run "$GITLEAKS" git --redact --no-banner \
+	# Solo el historial de esta versión: por defecto revisa todas las ramas, y un
+	# secreto en una rama haría fallar el CI de todas las demás.
+	titulo "gitleaks: secretos en el historial de esta versión"
+	go run "$GITLEAKS" git --redact --no-banner --log-opts=HEAD \
 		--report-format=sarif --report-path="$REPORTES/gitleaks.sarif"
 }
 
@@ -120,10 +122,13 @@ docs() {
 
 	titulo "enlaces de los Markdown versionados"
 	local archivos
-	mapfile -t archivos < <(git ls-files '*.md')
+	# docs/api queda afuera: sus enlaces al código los genera gomarkdoc, que ya se
+	# verifica arriba, y son cientos de pedidos a GitHub que a veces dan 504.
+	mapfile -t archivos < <(git ls-files '*.md' ':!docs/api/internal')
 	# Se excluye lo que no se puede verificar desde el CI: artifacts que piden
-	# sesión, el sitio y el badge (no existen hasta el primer despliegue).
-	lychee --no-progress --exclude-loopback --accept '200..=299,429' \
+	# sesión, el sitio y el badge. Un error temporal del servidor (429, 502, 503,
+	# 504) no prueba que el enlace esté roto.
+	lychee --no-progress --exclude-loopback --accept '200..=299,429,502..=504' \
 		--exclude '^https://claude\.ai/' \
 		--exclude '^https://mordecoi\.github\.io/' \
 		--exclude '^https://github\.com/mordecoi/analizador-logs-go/actions' \
@@ -163,7 +168,10 @@ correrBenchmarks() {
 }
 
 # hayRegresion lee el CSV de benchstat y devuelve 0 si alguna métrica empeoró de
-# forma significativa (p < 0,05) más allá de su tolerancia.
+# forma significativa (p < 0,05) más allá de su tolerancia. benchstat escribe "?"
+# en vez de un porcentaje si la base es 0: pasar de 0 asignaciones a alguna también
+# es una regresión. Un benchmark sin datos en una de las versiones no tiene p= y se
+# ignora.
 hayRegresion() {
 	awk -F, -v tiempo="$REGRESION_TIEMPO_PCT" -v asignacion="$REGRESION_ASIGNACION_PCT" '
 		$3 == "CI" {
@@ -173,16 +181,22 @@ hayRegresion() {
 			unidad = $2
 			next
 		}
-		limite == "" || $1 == "" || $1 == "geomean" || $6 !~ /^\+/ { next }
+		limite == "" || $1 == "" || $1 == "geomean" || $7 !~ /^p=/ { next }
+		$6 !~ /^\+/ && $6 != "?" { next }
 		{
 			p = $7
 			sub(/^p=/, "", p)
 			sub(/ .*/, "", p)
 			if (p + 0 >= 0.05) next
-			delta = $6
-			gsub(/[+%]/, "", delta)
-			if (delta == "Inf" || delta + 0 > limite + 0) {
-				print "regresión: " $1 " " unidad " " $6 " (" $7 ")"
+			if ($6 == "?") {
+				empeoro = $4 + 0 > $2 + 0
+			} else {
+				delta = $6
+				gsub(/[+%]/, "", delta)
+				empeoro = delta + 0 > limite + 0
+			}
+			if (empeoro) {
+				print "regresión: " $1 " " unidad " " $2 " -> " $4 " " $6 " (" $7 ")"
 				hallada = 1
 			}
 		}
