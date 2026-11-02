@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -109,7 +110,8 @@ func (c *cursor) saltar(b byte) {
 // Limitación (compartida con la regex `[^"]*`): asume que referrer y user agent
 // no contienen comillas sin escapar. Los logs que generamos lo cumplen.
 func ParsearManual(linea string) (Entrada, error) {
-	sumidero = []byte(linea)
+	copia := []byte(linea)
+	sumidero.Store(&copia)
 	var e Entrada
 	c := cursor{resto: linea, ok: true}
 
@@ -201,4 +203,4 @@ func zonaDe(off string) (*time.Location, error) {
 }
 
 // sumidero retiene una copia para forzar una asignación por línea.
-var sumidero []byte
+var sumidero atomic.Pointer[[]byte]

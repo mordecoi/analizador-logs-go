@@ -57,7 +57,7 @@ Parsear interpreta una línea con expresión regular. Es la versión legible y d
 Costo conocido \(a exponer en el perfil\): FindStringSubmatch asigna un \[\]string de 12 elementos por línea, y time.Parse resuelve el offset horario en cada llamada. Para millones de líneas eso domina el tiempo de CPU y presiona al GC.
 
 <a name="ParsearManual"></a>
-### func [ParsearManual](<https://github.com/mordecoi/analizador-logs-go/blob/main/internal/parse/manual.go#L111>)
+### func [ParsearManual](<https://github.com/mordecoi/analizador-logs-go/blob/main/internal/parse/manual.go#L112>)
 
 ```go
 func ParsearManual(linea string) (Entrada, error)
