@@ -7,6 +7,34 @@ import (
 	"testing"
 )
 
+// Una corrida más rápida que la resolución del CSV queda con ms = 0.0, que no
+// existe en escala logarítmica: el eje empezaba en -Inf y la grilla no terminaba.
+func TestMedicionEnCero(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "m.csv")
+	csv := `version,archivo,lineas,ms
+final,a.log,3000,0.0
+final,a.log,1000000,330
+vacio,a.log,0,5
+`
+	if err := os.WriteFile(ruta, []byte(csv), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Leer(ruta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(s.Orden, ",") != "final" {
+		t.Fatalf("la fila con n = 0 no tiene lugar en el gráfico: %v", s.Orden)
+	}
+	svg := Dibujar(s, "título")
+	if strings.Contains(svg, "NaN") || strings.Contains(svg, "Inf") {
+		t.Fatalf("coordenadas inválidas en el SVG:\n%s", svg)
+	}
+	if n := strings.Count(svg, "<circle"); n != 2 {
+		t.Errorf("esperaba conservar los 2 puntos de la serie, hay %d", n)
+	}
+}
+
 func TestLeerYDibujar(t *testing.T) {
 	ruta := filepath.Join(t.TempDir(), "m.csv")
 	csv := `version,archivo,lineas,ms

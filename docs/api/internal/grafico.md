@@ -19,7 +19,7 @@ Ejes log\-log: n va de 10⁶ a 2·10⁷ y el tiempo de \~10² a \~10⁶ ms, así
 
 
 <a name="Dibujar"></a>
-## func [Dibujar](<https://github.com/mordecoi/analizador-logs-go/blob/main/internal/grafico/grafico.go#L77>)
+## func [Dibujar](<https://github.com/mordecoi/analizador-logs-go/blob/main/internal/grafico/grafico.go#L81>)
 
 ```go
 func Dibujar(s Series, titulo string) string
@@ -52,7 +52,7 @@ type Series struct {
 ```
 
 <a name="Leer"></a>
-### func [Leer](<https://github.com/mordecoi/analizador-logs-go/blob/main/internal/grafico/grafico.go#L36>)
+### func [Leer](<https://github.com/mordecoi/analizador-logs-go/blob/main/internal/grafico/grafico.go#L40>)
 
 ```go
 func Leer(ruta string) (Series, error)
