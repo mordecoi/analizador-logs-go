@@ -39,7 +39,7 @@ zcat logs.gz | ./analizador analizar -a -
 
 ## Configuración
 
-Toda la configuración se pasa por flags: no hay archivos de configuración ni variables de entorno propias. La lista completa está en [CLI y contratos](api.md).
+Toda la configuración se pasa por flags: no hay archivos de configuración ni variables de entorno propias. La lista completa está en [CLI y contratos](cli.md).
 
 ## Ver las trazas
 

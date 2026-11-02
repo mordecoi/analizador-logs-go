@@ -11,7 +11,7 @@
     ```
 
 4. Ejecutar `scripts/controles.sh todo`.
-5. Abrir un PR hacia `main`. Para integrarlo hacen falta **una aprobación** y el check **Resultado** en verde.
+5. Abrir un PR hacia `main`. Para integrarlo hace falta el check **Resultado** en verde. No se exige una aprobación, así que cada integrante puede integrar sus propios PR, pero nadie puede hacerlo con el check en rojo: la regla también se aplica a los administradores.
 
 Si un cambio toca el camino caliente, conviene regenerar `cmd/analizador/default.pgo` (ver [`SEGUNDO-PARCIAL.md`](https://github.com/mordecoi/analizador-logs-go/blob/main/SEGUNDO-PARCIAL.md), sección 2).
 
@@ -85,6 +85,29 @@ Diferencias que hay que tener en cuenta:
 - **Detector de carreras:** en Windows no se ejecuta. Bitdefender bloqueó `pipeline.test.exe` compilado con `-race` (`Gen:Variant.Togi.101644`, una detección genérica y probablemente un falso positivo), y Go lo informa como `Access is denied`. El script avisa y corre los tests sin `-race`. El CI, en Linux, siempre lo usa, y [se puede reproducir con Docker](#resolver-fallos-del-pipeline).
 - **Rendimiento:** localmente compara contra el punto donde la rama se separó de `main`. Se puede cambiar con `BASE_REF=<commit>`. Los límites de memoria se fijaron con mediciones del runner, y pueden variar un poco en otra máquina.
 - **Versión de Go:** el CI usa la de `go.mod`. Con una versión de Go más nueva, `govulncheck` analiza otra biblioteca estándar y puede dar otro resultado. Para reproducirlo: `GOTOOLCHAIN=go1.26.10 scripts/controles.sh seguridad`.
+
+## Evidencia de rechazo
+
+Cada PR de prueba rompió un solo control a propósito y se cerró sin integrar. El check **Resultado** falló en todos. Los enlaces llevan a la ejecución del pipeline.
+
+| PR | Qué rompe | Etapa que rechazó | Motivo informado | Ejecución |
+|---|---|---|---|---|
+| [#2](https://github.com/mordecoi/analizador-logs-go/pull/2) | Una prueba que falla | Pruebas y cobertura | `--- FAIL: TestFallaAProposito` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396339594) |
+| [#3](https://github.com/mordecoi/analizador-logs-go/pull/3) | Una función sin usar | Calidad estática | `func sinUso is unused` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396342937) |
+| [#4](https://github.com/mordecoi/analizador-logs-go/pull/4) | Borra los tests de la CLI | Pruebas y cobertura, y Documentación | `cobertura total: 75.8 % (mínimo: 85 %)`; además, un documento enlazaba ese archivo | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396345577) |
+| [#5](https://github.com/mordecoi/analizador-logs-go/pull/5) | Un secreto inventado | Seguridad | `leaks found: 1` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396350580) |
+| [#6](https://github.com/mordecoi/analizador-logs-go/pull/6) | Un enlace roto | Documentación | `docs/no-existe.md: File not found` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396354607) |
+| [#7](https://github.com/mordecoi/analizador-logs-go/pull/7) | Una copia por línea en el parser | Rendimiento y memoria | `Parsear/manual sec/op +44.15%`; `memoria asignada: 279.5 MB (máximo: 82)` | [Ver](https://github.com/mordecoi/analizador-logs-go/actions/runs/41396380575) |
+
+Con la protección de `main` activa, GitHub informó el PR #7 como `BLOCKED`, por su check **Resultado** en rojo: no se puede integrar.
+
+Estas pruebas también encontraron fallas del propio pipeline, ya corregidas:
+
+| Falla | Corrección |
+|---|---|
+| `gitleaks` revisaba todas las ramas: el secreto de una rama hacía fallar el CI de las demás, incluida `main` | Revisa solo el historial de la versión probada |
+| Un `504` temporal de GitHub rechazó un PR sin relación | Los errores temporales no rechazan, y los enlaces generados de `docs/api` no se revisan |
+| Pasar de 0 asignaciones a alguna no se detectaba por sí solo: `benchstat` no da un porcentaje si la base es 0 | La comparación cubre ese caso. La ejecución de #7 es anterior a esta corrección y su regresión se detectó por otras métricas |
 
 ## Reportes
 
