@@ -44,3 +44,4 @@ Los requisitos académicos de los parciales anteriores están en [`REQUERIMIENTO
 | Entender cómo está armado | [Arquitectura](arquitectura.md) y [Diseño técnico](diseno.md) |
 | Usarlo desde un script | [CLI y contratos](cli.md) |
 | Contribuir o arreglar el pipeline | [Mantenimiento](mantenimiento.md) |
+| Probar el CI | [Enlace roto intencionalmente](ci-demo-enlace-inexistente.md) |
